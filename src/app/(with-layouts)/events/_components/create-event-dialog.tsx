@@ -135,7 +135,7 @@ export default function CreateEventDialog({ onCreate }: Props) {
       e.currentTarget.reset();
 
       // hand off straight to building this event's registration form
-      // router.push(`/form-builder?eventId=${result.eventId}`);
+      router.push(`/form-builder?eventId=${result.eventId}`);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Something went wrong.";
       toast.error("Couldn't create event", { description: message });
