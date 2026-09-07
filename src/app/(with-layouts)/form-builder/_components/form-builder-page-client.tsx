@@ -3,53 +3,131 @@
 import { Breadcrumbs } from "@/components/tailgrids/core/breadcrumbs";
 import { Button } from "@/components/tailgrids/core/button";
 import { Card } from "@/components/tailgrids/core/card";
-import {
-  Select,
-  SelectContent,
-  SelectIndicator,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/tailgrids/core/select";
+import { Input } from "@/components/tailgrids/core/input";
+import { Label } from "@/components/tailgrids/core/label";
+import { TextArea } from "@/components/tailgrids/core/text-area";
+import { TextField } from "@/components/tailgrids/core/text-field";
+import { ApiError, apiGet } from "@/lib/api-client";
+import { saveEventForm } from "@/lib/events";
 import {
   AVAILABLE_FIELD_TYPES,
   BuilderField,
   DEFAULT_BUILDER_FIELDS,
-  INITIAL_EVENTS,
-} from "@/utils/event-pulse-data";
+} from "@/utils/mindaras-data";
+import { ApiEvent, FormFieldPayload } from "@/utils/mindaras-api-types";
 import { Plus } from "@tailgrids/icons";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import FormPreviewField from "./form-preview-field";
+import FormFieldRow from "./form-field-row";
+
+// TODO: replace with real authenticated user id once auth is wired up
+const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 let fieldCounter = 0;
 
 export default function FormBuilderPageClient() {
-  const [selectedEventId, setSelectedEventId] = useState<string>(INITIAL_EVENTS[0]?.id ?? "");
-  const [fields, setFields] = useState<BuilderField[]>(DEFAULT_BUILDER_FIELDS);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("eventId");
 
-  const selectedEvent = INITIAL_EVENTS.find((e) => e.id === selectedEventId);
+  const [event, setEvent] = useState<ApiEvent | null>(null);
+  const [isLoadingEvent, setIsLoadingEvent] = useState(true);
+
+  const [formName, setFormName] = useState("Event Registration");
+  const [formDescription, setFormDescription] = useState("");
+  const [fields, setFields] = useState<BuilderField[]>(DEFAULT_BUILDER_FIELDS);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) {
+      setIsLoadingEvent(false);
+      return;
+    }
+    // No single-event GET endpoint yet — reuse the active-events list and
+    // find this event client-side. Swap for GET /api/Event/{id} once it exists.
+    apiGet<ApiEvent[]>("/api/Event/FetchActiveEvents")
+      .then((events) => {
+        const match = events.find((e) => e.eventId === eventId) ?? null;
+        setEvent(match);
+        if (match) setFormName(`${match.eventName} Registration`);
+      })
+      .catch(() => toast.error("Couldn't load event details"))
+      .finally(() => setIsLoadingEvent(false));
+  }, [eventId]);
 
   function addField(typeId: string) {
     const fieldType = AVAILABLE_FIELD_TYPES.find((t) => t.id === typeId);
     if (!fieldType) return;
 
     fieldCounter += 1;
+    const key = `custom-${fieldType.id}-${fieldCounter}`;
+
     setFields((prev) => [
       ...prev,
       {
-        key: `custom-${fieldType.id}-${fieldCounter}`,
+        key,
         typeId: fieldType.id,
-        label: fieldType.label,
+        fieldName: `${fieldType.id}_${fieldCounter}`, // placeholder until labeled
+        label: "",
         inputType: fieldType.inputType,
         required: false,
+        options: fieldType.inputType === "select" ? ["Option 1", "Option 2"] : [],
       },
     ]);
-    toast.success(`Added "${fieldType.label}" field`);
+  }
+
+  function updateField(key: string, updated: BuilderField) {
+    setFields((prev) => prev.map((f) => (f.key === key ? updated : f)));
   }
 
   function removeField(key: string) {
     setFields((prev) => prev.filter((f) => f.key !== key));
+  }
+
+  async function handleSave() {
+    if (!eventId) {
+      toast.error("No event selected — create or open an event first.");
+      return;
+    }
+    if (!formName.trim()) {
+      toast.error("Please give the form a name.");
+      return;
+    }
+    const unlabeled = fields.find((f) => !f.label.trim());
+    if (unlabeled) {
+      toast.error("Every field needs a label before saving.");
+      return;
+    }
+
+    const formFields: FormFieldPayload[] = fields.map((f) => ({
+      fieldName: f.fieldName,
+      fieldLabel: f.label.trim(),
+      fieldType: f.inputType,
+      isRequired: f.required,
+      options: f.inputType === "select" && f.options.length > 0
+        ? JSON.stringify(f.options)
+        : undefined,
+    }));
+
+    setIsSaving(true);
+    try {
+      await saveEventForm({
+        eventId,
+        userId: CURRENT_USER_ID,
+        formName: formName.trim(),
+        formDescription: formDescription.trim() || undefined,
+        formFields,
+      });
+
+      toast.success("Registration form saved");
+      router.push("/registrations");
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Something went wrong.";
+      toast.error("Couldn't save form", { description: message });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -60,7 +138,13 @@ export default function FormBuilderPageClient() {
             Registration Form Builder
           </h1>
           <p className="text-sm leading-5 text-text-tertiary">
-            Customize participant details captured during sign-up.
+            {isLoadingEvent
+              ? "Loading event…"
+              : event
+                ? `Building the form for "${event.eventName}"`
+                : eventId
+                  ? "Couldn't find that event."
+                  : "Open this page from an event's Create Event flow."}
           </p>
         </div>
 
@@ -74,72 +158,62 @@ export default function FormBuilderPageClient() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 px-2 lg:grid-cols-3 lg:px-5">
-        <Card className="h-fit space-y-4 p-5 lg:col-span-1">
-          <div>
-            <h2 className="font-semibold text-text-primary">Building form for</h2>
-            <Select
-              value={selectedEventId}
-              onChange={(val) => setSelectedEventId(val as string)}
-              className="mt-2 w-full"
-              aria-label="Select event"
-            >
-              <SelectTrigger className="w-full border-card-border">
-                <SelectValue />
-                <SelectIndicator />
-              </SelectTrigger>
-              <SelectContent className="min-w-(--trigger-width)">
-                {INITIAL_EVENTS.map((event) => (
-                  <SelectItem key={event.id} id={event.id} textValue={event.title}>
-                    {event.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2 border-t border-card-border pt-4">
-            <h2 className="font-semibold text-text-primary">Add Form Fields</h2>
-            <div className="space-y-2">
-              {AVAILABLE_FIELD_TYPES.map((fieldType) => (
-                <button
-                  key={fieldType.id}
-                  type="button"
-                  onClick={() => addField(fieldType.id)}
-                  className="flex w-full items-center justify-between rounded-xl border border-card-border p-3 text-sm font-medium text-text-primary transition hover:bg-background-gray-secondary_alt"
-                >
-                  <span>{fieldType.label}</span>
-                  <Plus className="size-4 text-icon-secondary" />
-                </button>
-              ))}
-            </div>
+        <Card className="h-fit space-y-2 p-5 lg:col-span-1">
+          <h2 className="font-semibold text-text-primary">Add Form Fields</h2>
+          <div className="space-y-2">
+            {AVAILABLE_FIELD_TYPES.map((fieldType) => (
+              <button
+                key={fieldType.id}
+                type="button"
+                onClick={() => addField(fieldType.id)}
+                className="flex w-full items-center justify-between rounded-xl border border-card-border p-3 text-sm font-medium text-text-primary transition hover:bg-background-gray-secondary_alt"
+              >
+                <span>{fieldType.label}</span>
+                <Plus className="size-4 text-icon-secondary" />
+              </button>
+            ))}
           </div>
         </Card>
 
         <Card className="space-y-6 p-6 shadow-sm lg:col-span-2">
-          <div className="border-b border-card-border pb-4">
-            <span className="text-xs font-semibold tracking-wider text-brand-500 uppercase">
-              Preview
-            </span>
-            <h2 className="text-xl leading-7 font-semibold text-text-primary">
-              Event Registration{selectedEvent ? `: ${selectedEvent.title}` : ""}
-            </h2>
+          <div className="space-y-4 border-b border-card-border pb-6">
+            <TextField className="gap-1.5">
+              <Label htmlFor="form-name">Form Name</Label>
+              <Input
+                id="form-name"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="Event Registration"
+                className="w-full"
+              />
+            </TextField>
+            <TextField className="gap-1.5">
+              <Label htmlFor="form-description">Form Description</Label>
+              <TextArea
+                id="form-description"
+                rows={2}
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="What should participants know before filling this out?"
+              />
+            </TextField>
           </div>
 
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              toast.success("This is a preview — connect it to your registration API to go live.");
-            }}
-          >
+          <div className="space-y-4">
             {fields.map((field) => (
-              <FormPreviewField key={field.key} field={field} onRemove={() => removeField(field.key)} />
+              <FormFieldRow
+                key={field.key}
+                field={field}
+                existingFieldNames={fields.filter((f) => f.key !== field.key).map((f) => f.fieldName)}
+                onChange={(updated) => updateField(field.key, updated)}
+                onRemove={() => removeField(field.key)}
+              />
             ))}
+          </div>
 
-            <Button type="submit" className="w-full py-3">
-              Submit Registration
-            </Button>
-          </form>
+          <Button onClick={handleSave} className="w-full py-3" isDisabled={isSaving || !eventId}>
+            {isSaving ? "Saving…" : "Save Form"}
+          </Button>
         </Card>
       </div>
     </div>

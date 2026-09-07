@@ -1,5 +1,6 @@
-// src/utils/event-pulse-api-types.ts
+// src/utils/mindaras-api-types.ts
 
+// payloads for events
 export type SaveEventPayload = {
   eventName: string;
   eventCategoryId: string; // GUID
@@ -29,12 +30,19 @@ export type SaveEventResponse = {
   eventRefNo: string;
 };
 
+export type EventCategory = {
+  eventCategoryId: string;
+  eventCategoryName: string;
+};
+// end payloads for events
+
+// payloads for form definition and form fields
 export type FormFieldPayload = {
   fieldName: string;
   fieldLabel: string;
-  fieldType: string; // one of FormFieldTypes constants — keep in sync with backend
+  fieldType: string;
   isRequired: boolean;
-  options?: string; // JSON-stringified array for select/checkbox
+  options?: string; // JSON-stringified array, e.g. '["General","VIP"]' — omitted when empty
 };
 
 export type SaveEventFormPayload = {
@@ -48,8 +56,4 @@ export type SaveEventFormPayload = {
 export type SaveEventFormResponse = {
   message: string;
 };
-
-export type EventCategory = {
-  eventCategoryId: string;
-  eventCategoryName: string;
-};
+// payloads for form definition and form fields
