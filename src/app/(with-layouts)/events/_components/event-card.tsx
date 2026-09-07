@@ -1,3 +1,4 @@
+// src/app/(with-layouts)/events/_components/event-card.tsx
 "use client";
 
 import { Badge } from "@/components/tailgrids/core/badge";
@@ -13,7 +14,10 @@ const STATUS_COLOR: Record<EventItem["status"], "success" | "gray" | "warning"> 
 };
 
 export default function EventCard({ event }: { event: EventItem }) {
-  const percentFilled = Math.min(100, Math.round((event.registered / event.capacity) * 100));
+  const hasCapacityData = typeof event.capacity === "number" && typeof event.registered === "number";
+  const percentFilled = hasCapacityData
+    ? Math.min(100, Math.round((event.registered! / event.capacity!) * 100))
+    : null;
 
   return (
     <Card className="flex flex-col gap-4 p-5">
@@ -44,19 +48,35 @@ export default function EventCard({ event }: { event: EventItem }) {
           <MapMarker5 className="size-4 text-icon-secondary" />
           <span>{event.location}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <UserMultiple1 className="size-4 text-icon-secondary" />
-          <span>
-            {event.registered} / {event.capacity} registered ({percentFilled}%)
-          </span>
-        </div>
+        {hasCapacityData ? (
+          <div className="flex items-center gap-2">
+            <UserMultiple1 className="size-4 text-icon-secondary" />
+            <span>
+              {event.registered} / {event.capacity} registered ({percentFilled}%)
+            </span>
+          </div>
+        ) : typeof event.capacity === "number" ? (
+          <div className="flex items-center gap-2">
+            <UserMultiple1 className="size-4 text-icon-secondary" />
+            <span>Capacity: {event.capacity}</span>
+          </div>
+        ) : null}
       </CardContent>
 
       <CardFooter className="flex items-center justify-between border-t border-card-border p-0 pt-3">
-        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-background-gray-secondary_alt">
-          <div className="h-full rounded-full bg-brand-500" style={{ width: `${percentFilled}%` }} />
-        </div>
-        <Button variant="ghost" appearance="ghost" size="sm" className="px-2 text-brand-500 hover:bg-transparent hover:text-brand-600">
+        {hasCapacityData ? (
+          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-background-gray-secondary_alt">
+            <div className="h-full rounded-full bg-brand-500" style={{ width: `${percentFilled}%` }} />
+          </div>
+        ) : (
+          <span className="text-[11px] text-text-tertiary">{event.eventRefNoLabel ?? ""}</span>
+        )}
+        <Button
+          variant="ghost"
+          appearance="ghost"
+          size="sm"
+          className="px-2 text-brand-500 hover:bg-transparent hover:text-brand-600"
+        >
           View Details
         </Button>
       </CardFooter>

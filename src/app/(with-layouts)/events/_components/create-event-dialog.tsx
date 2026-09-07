@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, buttonStyles } from "@/components/tailgrids/core/button";
 import {
   Dialog,
   DialogBody,
@@ -23,25 +24,19 @@ import {
 } from "@/components/tailgrids/core/select";
 import { TextArea } from "@/components/tailgrids/core/text-area";
 import { TextField } from "@/components/tailgrids/core/text-field";
+import { apiPost, ApiError } from "@/lib/api-client";
+import { fetchEventCategories } from "@/lib/event-categories";
 import { cn } from "@/utils/cn";
-import { EVENT_CATEGORIES, EventItem } from "@/utils/event-pulse-data";
+import { EventItem } from "@/utils/event-pulse-data";
+import { EventCategory, SaveEventPayload, SaveEventResponse } from "@/utils/mindaras-api-types";
 import { Plus } from "@tailgrids/icons";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Form } from "react-aria-components";
 import { toast } from "sonner";
-import { apiPost, ApiError } from "@/lib/api-client";
-import { SaveEventPayload, SaveEventResponse } from "@/utils/mindaras-api-types";
-import { useRouter } from "next/navigation";
-import { Button, buttonStyles } from "@/components/tailgrids/core/button";
-
-const CATEGORY_OPTIONS: { id: string; name: string }[] = [
-  { id: "REPLACE-WITH-REAL-GUID-1", name: "Tech Conference" },
-  { id: "REPLACE-WITH-REAL-GUID-2", name: "Workshop" },
-  { id: "REPLACE-WITH-REAL-GUID-3", name: "Bootcamp" },
-];
 
 // TODO: replace with real authenticated user id once auth is wired up
-const CURRENT_USER_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 type Props = {
   onCreate: (event: EventItem) => void;
@@ -50,8 +45,20 @@ type Props = {
 export default function CreateEventDialog({ onCreate }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [categoryId, setCategoryId] = useState(CATEGORY_OPTIONS[0]?.id ?? "");
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [eventCategoryId, setEventCategoryId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchEventCategories()
+      .then((fetched) => {
+        setCategories(fetched);
+        // default to the first category once loaded, so submitting without
+        // touching the dropdown still sends a valid id
+        setEventCategoryId((current) => current || fetched[0]?.eventCategoryId || "");
+      })
+      .catch(() => toast.error("Couldn't load event categories"));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -60,18 +67,35 @@ export default function CreateEventDialog({ onCreate }: Props) {
     const title = String(data.get("title") ?? "").trim();
     if (!title) return;
 
-    const date = String(data.get("date") ?? "");
-    const time = String(data.get("time") ?? "00:00");
-    const startDateTime = date ? new Date(`${date}T${time}:00`).toISOString() : new Date().toISOString();
+    if (!eventCategoryId) {
+      toast.error("Please select a category.");
+      return;
+    }
+
+    const startDate = String(data.get("date") ?? "");
+    const startTime = String(data.get("time") ?? "00:00");
+    const endDateRaw = String(data.get("endDate") ?? "") || startDate;
+    const endTimeRaw = String(data.get("endTime") ?? "") || startTime;
+
+    const startDateTime = startDate
+      ? new Date(`${startDate}T${startTime}:00`).toISOString()
+      : new Date().toISOString();
+    const endDateTime = endDateRaw
+      ? new Date(`${endDateRaw}T${endTimeRaw}:00`).toISOString()
+      : startDateTime;
+
+    const location = String(data.get("location") ?? "");
+    const description = String(data.get("description") ?? "");
+    const capacityRaw = Number(data.get("capacity") ?? 0) || undefined;
 
     const payload: SaveEventPayload = {
       eventName: title,
-      eventCategoryId: categoryId,
+      eventCategoryId: eventCategoryId,
       eventStartDate: startDateTime,
-      eventEndDate: startDateTime, // adjust if you collect an explicit end date/time
-      eventLocation: String(data.get("location") ?? ""),
-      description: String(data.get("description") ?? ""),
-      capacity: Number(data.get("capacity") ?? 0) || undefined,
+      eventEndDate: endDateTime,
+      eventLocation: location,
+      description,
+      eventCapacity: capacityRaw,
       userId: CURRENT_USER_ID,
     };
 
@@ -86,11 +110,32 @@ export default function CreateEventDialog({ onCreate }: Props) {
         description: `"${title}" (${result.eventRefNo}) was saved.`,
       });
 
+      // optimistically reflect the new event in the grid before navigating
+      const categoryName = categories.find((c) => c.eventCategoryId === eventCategoryId)?.eventCategoryName ?? "Uncategorized";
+      onCreate({
+        id: result.eventId,
+        category: categoryName,
+        title,
+        description,
+        date: startDate
+          ? new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "TBD",
+        time: startTime || "TBD",
+        location: location || "TBD",
+        status: "Draft",
+        capacity: capacityRaw ?? 100,
+        registered: 0,
+      });
+
       setIsOpen(false);
       e.currentTarget.reset();
 
       // hand off straight to building this event's registration form
-      router.push(`/form-builder?eventId=${result.eventId}`);
+      // router.push(`/form-builder?eventId=${result.eventId}`);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Something went wrong.";
       toast.error("Couldn't create event", { description: message });
@@ -107,7 +152,7 @@ export default function CreateEventDialog({ onCreate }: Props) {
       </Button>
 
       <OverlayWrapper isOpen={isOpen} onOpenChange={setIsOpen}>
-        <Backdrop isDismissable>
+        <Backdrop isDismissable={!isSubmitting}>
           <Dialog className="max-w-135 p-0">
             <Form onSubmit={handleSubmit}>
               <DialogHeader className="gap-1 border-b border-card-border py-4 pr-14 pl-5">
@@ -125,16 +170,22 @@ export default function CreateEventDialog({ onCreate }: Props) {
                 </TextField>
 
                 <div className="col-span-1 flex flex-col gap-1.5 sm:col-span-2">
-                  <Select value={category} onChange={(val) => setCategory(val as string)} className="w-full" aria-label="Category">
+                  <Select
+                    value={eventCategoryId}
+                    onChange={(val) => setEventCategoryId(val as string)}
+                    className="w-full"
+                    aria-label="Category"
+                    isDisabled={categories.length === 0}
+                  >
                     <Label>Category</Label>
                     <SelectTrigger className="w-full border-card-border">
-                      <SelectValue />
+                      <SelectValue placeholder={categories.length === 0 ? "Loading categories…" : undefined} />
                       <SelectIndicator />
                     </SelectTrigger>
                     <SelectContent className="min-w-(--trigger-width)">
-                      {EVENT_CATEGORIES.map((opt) => (
-                        <SelectItem key={opt} id={opt} textValue={opt}>
-                          {opt}
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.eventCategoryId} id={cat.eventCategoryId} textValue={cat.eventCategoryName}>
+                          {cat.eventCategoryName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -142,13 +193,23 @@ export default function CreateEventDialog({ onCreate }: Props) {
                 </div>
 
                 <TextField className="gap-1.5">
-                  <Label htmlFor="event-date">Date</Label>
+                  <Label htmlFor="event-date">Start Date</Label>
                   <Input id="event-date" name="date" type="date" required className="w-full" />
                 </TextField>
 
                 <TextField className="gap-1.5">
-                  <Label htmlFor="event-time">Time</Label>
+                  <Label htmlFor="event-time">Start Time</Label>
                   <Input id="event-time" name="time" type="time" required className="w-full" />
+                </TextField>
+
+                <TextField className="gap-1.5">
+                  <Label htmlFor="event-end-date">End Date</Label>
+                  <Input id="event-end-date" name="endDate" type="date" className="w-full" />
+                </TextField>
+
+                <TextField className="gap-1.5">
+                  <Label htmlFor="event-end-time">End Time</Label>
+                  <Input id="event-end-time" name="endTime" type="time" className="w-full" />
                 </TextField>
 
                 <TextField className="gap-1.5">
@@ -168,11 +229,14 @@ export default function CreateEventDialog({ onCreate }: Props) {
               </DialogBody>
 
               <DialogFooter className="border-t border-card-border px-5 py-4">
-                <DialogClose className={cn(buttonStyles({ appearance: "outline", size: "lg", className: "px-3.5 text-sm" }))}>
+                <DialogClose
+                  isDisabled={isSubmitting}
+                  className={cn(buttonStyles({ appearance: "outline", size: "lg", className: "px-3.5 text-sm" }))}
+                >
                   Cancel
                 </DialogClose>
-                <Button type="submit" size="lg" className="px-3.5 text-sm">
-                  Save Event
+                <Button type="submit" size="lg" className="px-3.5 text-sm" isDisabled={isSubmitting}>
+                  {isSubmitting ? "Saving…" : "Save Event"}
                 </Button>
               </DialogFooter>
             </Form>

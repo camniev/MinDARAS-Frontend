@@ -7,8 +7,20 @@ export type SaveEventPayload = {
   eventEndDate: string;    // ISO 8601
   eventLocation?: string;
   description?: string;
-  capacity?: number;
+  eventCapacity?: number;
   userId: string; // GUID
+};
+
+export type ApiEvent = {
+  eventId: string;
+  eventName: string;
+  eventRefNo: string;
+  eventStartDate: string; // ISO, no timezone offset
+  eventEndDate: string;
+  eventCategoryName: string | null;
+  description: string | null;
+  eventLocation: string | null;
+  eventCapacity: number | null;
 };
 
 export type SaveEventResponse = {
@@ -38,6 +50,6 @@ export type SaveEventFormResponse = {
 };
 
 export type EventCategory = {
-  id: string;
-  name: string;
+  eventCategoryId: string;
+  eventCategoryName: string;
 };
