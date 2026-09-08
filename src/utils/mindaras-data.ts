@@ -63,14 +63,4 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     options: [],
     locked: true,
   },
-  {
-    key: "field-ticket",
-    typeId: "select",
-    fieldName: "ticket_type",
-    label: "Ticket Type",
-    inputType: "select",
-    required: true,
-    options: ["General Admission", "VIP Pass", "Student"],
-    locked: true,
-  },
 ];

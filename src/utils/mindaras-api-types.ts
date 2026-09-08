@@ -36,13 +36,32 @@ export type EventCategory = {
 };
 // end payloads for events
 
-// payloads for form definition and form fields
+// new types and payload for form definition and form fields
+export type FormFieldDetail = {
+  fieldId: string;
+  fieldName: string;
+  fieldLabel: string;
+  fieldType: string;
+  isRequired: boolean;
+  options: string | null;
+  orderIndex: number;
+  isLocked: boolean;
+};
+
+export type FormDefinitionDetail = {
+  formId: string;
+  formName: string;
+  formDescription: string | null;
+  formFields: FormFieldDetail[];
+};
+
 export type FormFieldPayload = {
   fieldName: string;
   fieldLabel: string;
   fieldType: string;
   isRequired: boolean;
-  options?: string; // JSON-stringified array, e.g. '["General","VIP"]' — omitted when empty
+  options: string;
+  isLocked: boolean;
 };
 
 export type SaveEventFormPayload = {
@@ -57,3 +76,48 @@ export type SaveEventFormResponse = {
   message: string;
 };
 // payloads for form definition and form fields
+
+// new types to display and add registration items
+export type EventDetail = ApiEvent & {
+  isActive: boolean;
+  formId: string | null;
+};
+
+export type RegistrationResponseItem = {
+  fieldLabel: string;
+  fieldValue: string;
+};
+
+export type RegistrationListItem = {
+  registrationId: string;
+  participantCode: string;
+  qrCode: string;
+  registrationDate: string;
+  checkInTime: string | null; // null => Pending
+  responses: RegistrationResponseItem[];
+};
+
+// types for registration/saving participants data
+// src/utils/mindaras-api-types.ts — add
+export type FieldResponsePayload = {
+  fieldId: string;
+  value: string;
+};
+
+export type RegisterParticipantPayload = {
+  responses: FieldResponsePayload[];
+};
+
+export type RegistrationConfirmation = {
+  registrationId: string;
+  participantCode: string;
+  qrCode: string;
+  eventName: string;
+};
+
+// ASP.NET Core's ValidationProblemDetails shape
+export type ValidationErrorResponse = {
+  title: string;
+  status: number;
+  errors: Record<string, string[]>;
+};

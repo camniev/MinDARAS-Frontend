@@ -8,7 +8,7 @@ import { Label } from "@/components/tailgrids/core/label";
 import { TextArea } from "@/components/tailgrids/core/text-area";
 import { TextField } from "@/components/tailgrids/core/text-field";
 import { ApiError, apiGet } from "@/lib/api-client";
-import { saveEventForm } from "@/lib/events";
+import { saveEventForm, fetchFormForEvent } from "@/lib/events";
 import {
   AVAILABLE_FIELD_TYPES,
   BuilderField,
@@ -38,22 +38,47 @@ export default function FormBuilderPageClient() {
   const [formDescription, setFormDescription] = useState("");
   const [fields, setFields] = useState<BuilderField[]>(DEFAULT_BUILDER_FIELDS);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingForm, setIsLoadingForm] = useState(true);
 
   useEffect(() => {
     if (!eventId) {
       setIsLoadingEvent(false);
+      setIsLoadingForm(false);
       return;
     }
-    // No single-event GET endpoint yet — reuse the active-events list and
-    // find this event client-side. Swap for GET /api/Event/{id} once it exists.
+
     apiGet<ApiEvent[]>("/api/Event/FetchActiveEvents")
       .then((events) => {
         const match = events.find((e) => e.eventId === eventId) ?? null;
         setEvent(match);
-        if (match) setFormName(`${match.eventName} Registration`);
       })
       .catch(() => toast.error("Couldn't load event details"))
       .finally(() => setIsLoadingEvent(false));
+
+    fetchFormForEvent(eventId)
+      .then((existingForm) => {
+        if (!existingForm) {
+          // no form yet — keep the defaults, this is a genuine "Create"
+          return;
+        }
+
+        setFormName(existingForm.formName);
+        setFormDescription(existingForm.formDescription ?? "");
+        setFields(
+          existingForm.formFields.map((f) => ({
+            key: f.fieldId, // stable now — it's a real DB id, not a client-generated one
+            typeId: f.fieldType,
+            fieldName: f.fieldName,
+            label: f.fieldLabel,
+            inputType: f.fieldType as BuilderField["inputType"],
+            required: f.isRequired,
+            options: f.options ? (JSON.parse(f.options) as string[]) : [],
+            locked: f.isLocked,
+          })),
+        );
+      })
+      .catch(() => toast.error("Couldn't load the existing form"))
+      .finally(() => setIsLoadingForm(false));
   }, [eventId]);
 
   function addField(typeId: string) {
@@ -108,20 +133,25 @@ export default function FormBuilderPageClient() {
       options: f.inputType === "select" && f.options.length > 0
         ? JSON.stringify(f.options)
         : undefined,
+      isLocked: Boolean(f.locked),
     }));
 
     setIsSaving(true);
     try {
-      await saveEventForm({
-        eventId,
-        userId: CURRENT_USER_ID,
-        formName: formName.trim(),
-        formDescription: formDescription.trim() || undefined,
-        formFields,
-      });
+      const payload = {
+          eventId,
+          userId: CURRENT_USER_ID,
+          formName: formName.trim(),
+          formDescription: formDescription.trim() || undefined,
+          formFields,
+      };
+
+      console.log(JSON.stringify(payload, null, 2));
+
+      await saveEventForm(payload);
 
       toast.success("Registration form saved");
-      router.push("/registrations");
+      router.push(`/events/${eventId}`);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Something went wrong.";
       toast.error("Couldn't save form", { description: message });
@@ -211,8 +241,8 @@ export default function FormBuilderPageClient() {
             ))}
           </div>
 
-          <Button onClick={handleSave} className="w-full py-3" isDisabled={isSaving || !eventId}>
-            {isSaving ? "Saving…" : "Save Form"}
+          <Button onClick={handleSave} className="w-full py-3" isDisabled={isSaving || isLoadingForm || !eventId}>
+            {isLoadingForm ? "Loading form…" : isSaving ? "Saving…" : "Save Form"}
           </Button>
         </Card>
       </div>

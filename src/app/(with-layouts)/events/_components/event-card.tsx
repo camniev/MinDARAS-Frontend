@@ -6,6 +6,7 @@ import { Button } from "@/components/tailgrids/core/button";
 import { Card, CardContent, CardFooter } from "@/components/tailgrids/core/card";
 import { EventItem } from "@/utils/event-pulse-data";
 import { Calendar, MapMarker5, UserMultiple1 } from "@tailgrids/icons";
+import Link from "next/link";
 
 const STATUS_COLOR: Record<EventItem["status"], "success" | "gray" | "warning"> = {
   Active: "success",
@@ -77,7 +78,7 @@ export default function EventCard({ event }: { event: EventItem }) {
           size="sm"
           className="px-2 text-brand-500 hover:bg-transparent hover:text-brand-600"
         >
-          View Details
+          <Link href={`/events/${event.id}`}>View Details</Link>
         </Button>
       </CardFooter>
     </Card>
