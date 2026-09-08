@@ -1,4 +1,3 @@
-// src/app/(public)/register/[eventId]/_components/dynamic-field-input.tsx
 "use client";
 
 import { Checkbox } from "@/components/tailgrids/core/checkbox";
@@ -90,7 +89,6 @@ export default function DynamicFieldInput({ field, value, onChange, error }: Pro
     );
   }
 
-  // text / email / number / date
   return (
     <TextField className="gap-1.5">
       <Label>

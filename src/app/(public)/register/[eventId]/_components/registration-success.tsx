@@ -1,4 +1,3 @@
-// src/app/(public)/register/[eventId]/_components/registration-success.tsx
 "use client";
 
 import { Card } from "@/components/tailgrids/core/card";

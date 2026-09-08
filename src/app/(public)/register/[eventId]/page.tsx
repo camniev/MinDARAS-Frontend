@@ -1,4 +1,3 @@
-// src/app/(public)/register/[eventId]/page.tsx
 import type { Metadata } from "next";
 import RegisterPageClient from "./_components/register-page-client";
 

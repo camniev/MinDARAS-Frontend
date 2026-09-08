@@ -1,11 +1,10 @@
-// src/app/(public)/register/[eventId]/_components/register-page-client.tsx
 "use client";
 
 import { Button } from "@/components/tailgrids/core/button";
 import { Card } from "@/components/tailgrids/core/card";
 import { ApiError } from "@/lib/api-client";
 import { fetchFormForEvent, registerForEvent } from "@/lib/events";
-import { FormDefinitionDetail } from "@/utils/mindaras-api-types";
+import { FormDefinitionDetail, RegistrationConfirmation } from "@/utils/mindaras-api-types";
 import { useEffect, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
@@ -18,7 +17,7 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmation, setConfirmation] = useState<Awaited<ReturnType<typeof registerForEvent>> | null>(null);
+  const [confirmation, setConfirmation] = useState<RegistrationConfirmation | null>(null);
 
   useEffect(() => {
     fetchFormForEvent(eventId)
@@ -49,7 +48,6 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
       setConfirmation(result);
     } catch (err) {
       if (err instanceof ApiError && err.fieldErrors) {
-        // map backend's fieldName-keyed errors back onto this field's fieldId-keyed state
         const byFieldId: Record<string, string[]> = {};
         for (const f of form.formFields) {
           if (err.fieldErrors[f.fieldName]) byFieldId[f.fieldId] = err.fieldErrors[f.fieldName];

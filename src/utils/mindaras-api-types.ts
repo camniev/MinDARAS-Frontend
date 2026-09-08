@@ -84,6 +84,7 @@ export type EventDetail = ApiEvent & {
 };
 
 export type RegistrationResponseItem = {
+  fieldId: string;
   fieldLabel: string;
   fieldValue: string;
 };
