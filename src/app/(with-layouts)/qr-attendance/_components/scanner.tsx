@@ -1,19 +1,33 @@
 "use client";
 
 import { Button } from "@/components/tailgrids/core/button";
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 const READER_ELEMENT_ID = "qr-attendance-reader";
+
+export type ScannerHandle = {
+  resume: () => void;
+};
 
 type Props = {
   onScan: (decodedText: string) => void;
 };
 
-export default function Scanner({ onScan }: Props) {
+const Scanner = forwardRef<ScannerHandle, Props>(function Scanner({ onScan }, ref) {
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
+  const isPausedRef = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    resume() {
+      if (scannerRef.current && isPausedRef.current) {
+        scannerRef.current.resume();
+        isPausedRef.current = false;
+      }
+    },
+  }));
 
   useEffect(() => {
     return () => {
@@ -25,19 +39,26 @@ export default function Scanner({ onScan }: Props) {
     setError(null);
     try {
       const { Html5QrcodeScanner } = await import("html5-qrcode");
-
       if (scannerRef.current) return;
 
       const scanner = new Html5QrcodeScanner(
         READER_ELEMENT_ID,
         { fps: 10, qrbox: { width: 220, height: 220 } },
-        /* verbose= */ false,
+        false,
       );
 
       scanner.render(
-        (decodedText: string) => onScan(decodedText),
+        (decodedText: string) => {
+          // Html5QrcodeScanner keeps decoding the same code every ~100ms while
+          // it's in frame — pause immediately so we only process it once, and
+          // don't process another scan until the parent calls resume().
+          if (isPausedRef.current) return;
+          isPausedRef.current = true;
+          scannerRef.current?.pause(true);
+          onScan(decodedText);
+        },
         () => {
-          // Ignore per-frame decode failures — expected while aiming the camera.
+          // ignore per-frame decode failures — expected while aiming the camera
         },
       );
 
@@ -64,4 +85,6 @@ export default function Scanner({ onScan }: Props) {
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
-}
+});
+
+export default Scanner;

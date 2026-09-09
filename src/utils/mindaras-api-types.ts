@@ -122,3 +122,13 @@ export type ValidationErrorResponse = {
   status: number;
   errors: Record<string, string[]>;
 };
+
+// type for result from scanning QR code
+export type ScanResult = {
+  result: "success" | "already-checked-in" | "invalid";
+  attendeeName: string | null;
+  attendeeEmail: string | null;
+  eventName: string | null;
+  participantCode: string | null;
+  checkInTime: string | null;
+};

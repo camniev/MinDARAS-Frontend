@@ -1,39 +1,56 @@
 "use client";
 
 import { Breadcrumbs } from "@/components/tailgrids/core/breadcrumbs";
+import { Button } from "@/components/tailgrids/core/button";
 import { Card } from "@/components/tailgrids/core/card";
-import { INITIAL_REGISTRATIONS, Registration } from "@/utils/event-pulse-data";
-import { useState } from "react";
+import { scanTicket } from "@/lib/attendance";
+import { ApiError } from "@/lib/api-client";
+import { ScanResult } from "@/utils/mindaras-api-types";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import ScanResultCard, { ScanResult } from "./scan-result-card";
-import Scanner from "./scanner";
+import ScanResultCard from "./scan-result-card";
+import Scanner, { ScannerHandle } from "./scanner";
+
+// TODO: replace with real authenticated user id once auth is wired up
+const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 export default function QrAttendancePageClient() {
-  const [registrations, setRegistrations] = useState<Registration[]>(INITIAL_REGISTRATIONS);
-  const [result, setResult] = useState<ScanResult>({ kind: "empty" });
+  const scannerRef = useRef<ScannerHandle>(null);
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  function handleScan(decodedText: string) {
-    const code = decodedText.trim();
-    const match = registrations.find((r) => r.ticketCode === code);
+  async function handleScan(decodedText: string) {
+    setIsProcessing(true);
+    try {
+      const scanResult = await scanTicket(decodedText.trim(), CURRENT_USER_ID);
+      setResult(scanResult);
 
-    if (!match) {
-      setResult({ kind: "invalid", code });
-      toast.error("Invalid ticket code", { description: code });
-      return;
+      if (scanResult.result === "success") {
+        toast.success("Checked in", { description: `${scanResult.attendeeName} — ${scanResult.eventName}` });
+      } else if (scanResult.result === "already-checked-in") {
+        toast.warning("Already checked in", { description: scanResult.attendeeName ?? undefined });
+      } else {
+        toast.error("Invalid ticket code");
+      }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Couldn't reach the server.";
+      setResult({
+        result: "invalid",
+        attendeeName: null,
+        attendeeEmail: null,
+        eventName: null,
+        participantCode: null,
+        checkInTime: null,
+      });
+      toast.error("Scan failed", { description: message });
+    } finally {
+      setIsProcessing(false);
     }
+  }
 
-    if (match.status === "Checked-In") {
-      setResult({ kind: "already-checked-in", registration: match });
-      toast.warning("Already checked in", { description: match.attendee });
-      return;
-    }
-
-    const checkInTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const updated: Registration = { ...match, status: "Checked-In", checkInTime };
-
-    setRegistrations((prev) => prev.map((r) => (r.id === match.id ? updated : r)));
-    setResult({ kind: "success", registration: updated });
-    toast.success("Checked in", { description: `${match.attendee} — ${match.eventTitle}` });
+  function handleScanNext() {
+    setResult(null);
+    scannerRef.current?.resume();
   }
 
   return (
@@ -60,16 +77,17 @@ export default function QrAttendancePageClient() {
       <div className="grid grid-cols-1 items-start gap-5 px-2 md:grid-cols-2 lg:px-5">
         <Card className="space-y-4 p-6">
           <h2 className="text-lg leading-7 font-semibold text-text-primary">Camera</h2>
-          <Scanner onScan={handleScan} />
-          <p className="text-xs text-text-tertiary">
-            Tip: try scanning a ticket QR that encodes one of the codes from your Registration
-            List, e.g. <span className="font-mono">TS2026-8821</span>.
-          </p>
+          <Scanner ref={scannerRef} onScan={handleScan} />
         </Card>
 
         <Card className="space-y-4 p-6">
           <h2 className="text-lg leading-7 font-semibold text-text-primary">Last Scanned Ticket</h2>
-          <ScanResultCard result={result} />
+          <ScanResultCard result={isProcessing ? null : result} />
+          {result && (
+            <Button onClick={handleScanNext} className="w-full py-2.5" isDisabled={isProcessing}>
+              Scan Next Ticket
+            </Button>
+          )}
         </Card>
       </div>
     </div>
