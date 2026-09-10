@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/tailgrids/core/card"
 import { ApiError } from "@/lib/api-client";
 import { fetchActiveEvents } from "@/lib/events";
 import { cn } from "@/utils/cn";
-import { EventItem } from "@/utils/event-pulse-data";
+import { EventItem } from "@/utils/mindaras-data";
 import { mapApiEventToEventItem } from "@/utils/map-api-event";
 import { Calendar, CheckCircle1, UserMultiple1 } from "@tailgrids/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -40,8 +40,9 @@ export default function EventsPageClient() {
   }, [loadEvents]);
 
   const stats = useMemo(() => {
-    const active = events.filter((e) => e.status === "Active").length;
+    const ongoing = events.filter((e) => e.status === "Ongoing").length;
     const totalRegistered = events.reduce((sum, e) => sum + (e.registered ?? 0), 0);
+
     return [
       {
         id: "total",
@@ -54,7 +55,7 @@ export default function EventsPageClient() {
       {
         id: "active",
         title: "Active Events",
-        value: active,
+        value: ongoing,   // ← now counts Ongoing, not the old "Active" status
         icon: <CheckCircle1 />,
         iconBgClass: "bg-badge-success-background",
         iconColorClass: "text-badge-success-icon-color",

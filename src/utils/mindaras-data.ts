@@ -1,6 +1,6 @@
 // src/utils/mindaras-data.ts — update EventItem, keep the rest of the file as-is
 
-export type EventStatus = "Active" | "Draft" | "Completed";
+export type EventStatus = "Upcoming" | "Ongoing" | "Completed";
 
 export type EventItem = {
   id: string;
@@ -11,8 +11,9 @@ export type EventItem = {
   time: string;
   location: string;
   status: EventStatus;
-  capacity?: number;   // API can return null — no capacity set yet
-  registered?: number; // no registration-count endpoint yet
+  capacity?: number;
+  registered?: number;
+  checkedIn?: number;
 };
 
 export type FormFieldType = {

@@ -1,5 +1,21 @@
 // src/utils/mindaras-api-types.ts
 
+export type EventStatus = "Upcoming" | "Ongoing" | "Completed";
+
+export type EventItem = {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  status: EventStatus;
+  capacity?: number;
+  registered?: number;
+  checkedIn?: number;
+};
+
 // payloads for events
 export type SaveEventPayload = {
   eventName: string;
@@ -22,6 +38,8 @@ export type ApiEvent = {
   description: string | null;
   eventLocation: string | null;
   eventCapacity: number | null;
+  registrationCount: number;
+  checkedInCount: number;
 };
 
 export type SaveEventResponse = {

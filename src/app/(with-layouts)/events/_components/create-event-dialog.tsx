@@ -27,13 +27,14 @@ import { TextField } from "@/components/tailgrids/core/text-field";
 import { apiPost, ApiError } from "@/lib/api-client";
 import { fetchEventCategories } from "@/lib/event-categories";
 import { cn } from "@/utils/cn";
-import { EventItem } from "@/utils/event-pulse-data";
+import { EventItem } from "@/utils/mindaras-data";
 import { EventCategory, SaveEventPayload, SaveEventResponse } from "@/utils/mindaras-api-types";
 import { Plus } from "@tailgrids/icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Form } from "react-aria-components";
 import { toast } from "sonner";
+import { deriveStatus } from "@/utils/map-api-event";
 
 // TODO: replace with real authenticated user id once auth is wired up
 const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
@@ -113,23 +114,24 @@ export default function CreateEventDialog({ onCreate }: Props) {
       // optimistically reflect the new event in the grid before navigating
       const categoryName = categories.find((c) => c.eventCategoryId === eventCategoryId)?.eventCategoryName ?? "Uncategorized";
       onCreate({
-        id: result.eventId,
-        category: categoryName,
-        title,
-        description,
-        date: startDate
-          ? new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "TBD",
-        time: startTime || "TBD",
-        location: location || "TBD",
-        status: "Draft",
-        capacity: capacityRaw ?? 100,
-        registered: 0,
-      });
+      id: result.eventId,
+      category: categoryName,
+      title,
+      description,
+      date: startDate
+        ? new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "TBD",
+      time: startTime || "TBD",
+      location: location || "TBD",
+      status: deriveStatus(startDateTime, endDateTime), // ← was: "Draft"
+      capacity: capacityRaw,
+      registered: 0,
+      checkedIn: 0,
+    });
 
       setIsOpen(false);
       e.currentTarget.reset();
