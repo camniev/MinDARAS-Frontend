@@ -1,10 +1,11 @@
 "use client";
 
-import { Button } from "@/components/tailgrids/core/button";
 import { Card } from "@/components/tailgrids/core/card";
 import { ApiError } from "@/lib/api-client";
 import { fetchFormForEvent, registerForEvent } from "@/lib/events";
+import { resolveAssetUrl } from "@/lib/resolve-asset-url";
 import { FormDefinitionDetail, RegistrationConfirmation } from "@/utils/mindaras-api-types";
+import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
 import { useEffect, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
@@ -18,6 +19,20 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<RegistrationConfirmation | null>(null);
+
+  const theme = form?.theme ?? DEFAULT_FORM_THEME;
+  const backgroundImageUrl = resolveAssetUrl(theme.backgroundImageUrl);
+  const headerImageUrl = resolveAssetUrl(theme.headerImageUrl);
+
+  const pageBackgroundStyle: React.CSSProperties =
+    theme.backgroundType === "image" && backgroundImageUrl
+      ? {
+          backgroundImage: `url(${backgroundImageUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }
+      : { backgroundColor: theme.backgroundColor ?? "#F4F5F7" };
 
   useEffect(() => {
     fetchFormForEvent(eventId)
@@ -61,46 +76,82 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
     }
   }
 
+  // shared page shell — every state (loading/error/success/form) renders through this
+  // so the themed background is consistent even before the form data arrives
+  function Shell({ children }: { children: React.ReactNode }) {
+    return (
+      <div className="flex w-full min-h-screen justify-center px-4 py-10" style={pageBackgroundStyle}>
+        <div className="w-full max-w-[640px]">{children}</div>
+      </div>
+    );
+  }
+
   if (isLoading) {
-    return <Card className="h-64 animate-pulse bg-background-gray-secondary_alt" />;
+    return (
+      <Shell>
+        <Card className="h-64 w-full animate-pulse bg-background-gray-secondary_alt" />
+      </Shell>
+    );
   }
 
   if (confirmation) {
-    return <RegistrationSuccess confirmation={confirmation} />;
+    return (
+      <Shell>
+        <RegistrationSuccess confirmation={confirmation} />
+      </Shell>
+    );
   }
 
   if (loadError || !form) {
     return (
-      <Card className="space-y-2 py-12 text-center">
-        <p className="text-sm text-text-tertiary">{loadError ?? "This form isn't available."}</p>
-      </Card>
+      <Shell>
+        <Card className="space-y-2 py-12 text-center">
+          <p className="text-sm text-text-tertiary">{loadError ?? "This form isn't available."}</p>
+        </Card>
+      </Shell>
     );
   }
 
   return (
-    <Card className="space-y-6 p-6">
-      <div>
-        <h1 className="text-xl leading-7 font-semibold text-text-primary">{form.formName}</h1>
-        {form.formDescription && (
-          <p className="mt-1 text-sm leading-5 text-text-tertiary">{form.formDescription}</p>
+    <Shell>
+      <Card className="space-y-6 p-6 sm:p-8">
+        {headerImageUrl && (
+          <img src={headerImageUrl} alt="" className="mx-auto h-20 object-contain" />
         )}
-      </div>
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        {form.formFields.map((field) => (
-          <DynamicFieldInput
-            key={field.fieldId}
-            field={field}
-            value={values[field.fieldId] ?? ""}
-            onChange={(val) => setValues((prev) => ({ ...prev, [field.fieldId]: val }))}
-            error={fieldErrors[field.fieldId]?.[0]}
-          />
-        ))}
+        <div>
+          <h1
+            className="text-xl leading-7 font-semibold"
+            style={{ color: theme.headerTextColor ?? undefined }}
+          >
+            {theme.headerText || form.formName}
+          </h1>
+          {form.formDescription && (
+            <p className="mt-1 text-sm leading-5 text-text-tertiary">{form.formDescription}</p>
+          )}
+        </div>
 
-        <Button type="submit" className="w-full py-3" isDisabled={isSubmitting}>
-          {isSubmitting ? "Submitting…" : "Submit Registration"}
-        </Button>
-      </form>
-    </Card>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          {form.formFields.map((field) => (
+            <DynamicFieldInput
+              key={field.fieldId}
+              field={field}
+              value={values[field.fieldId] ?? ""}
+              onChange={(val) => setValues((prev) => ({ ...prev, [field.fieldId]: val }))}
+              error={fieldErrors[field.fieldId]?.[0]}
+            />
+          ))}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-60"
+            style={{ backgroundColor: theme.primaryColor ?? "#3C50E0" }}
+          >
+            {isSubmitting ? "Submitting…" : "Submit Registration"}
+          </button>
+        </form>
+      </Card>
+    </Shell>
   );
 }

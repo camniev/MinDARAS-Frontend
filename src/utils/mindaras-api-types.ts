@@ -1,21 +1,5 @@
 // src/utils/mindaras-api-types.ts
 
-export type EventStatus = "Upcoming" | "Ongoing" | "Completed";
-
-export type EventItem = {
-  id: string;
-  category: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  status: EventStatus;
-  capacity?: number;
-  registered?: number;
-  checkedIn?: number;
-};
-
 // payloads for events
 export type SaveEventPayload = {
   eventName: string;
@@ -66,11 +50,24 @@ export type FormFieldDetail = {
   isLocked: boolean;
 };
 
+// type for FormThem
+export type FormTheme = {
+  backgroundType: "color" | "image";
+  backgroundColor: string | null;
+  backgroundImageUrl: string | null;
+  primaryColor: string | null;
+  headerImageUrl: string | null;
+  headerText: string | null;
+  headerTextColor: string | null;
+};
+
+// type for FormDefinitionDetail
 export type FormDefinitionDetail = {
   formId: string;
   formName: string;
   formDescription: string | null;
   formFields: FormFieldDetail[];
+  theme: FormTheme | null;
 };
 
 export type FormFieldPayload = {

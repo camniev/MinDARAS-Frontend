@@ -1,5 +1,7 @@
 // src/utils/mindaras-data.ts — update EventItem, keep the rest of the file as-is
 
+import { FormTheme } from "./mindaras-api-types";
+
 export type EventStatus = "Upcoming" | "Ongoing" | "Completed";
 
 export type EventItem = {
@@ -65,3 +67,13 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     locked: true,
   },
 ];
+
+export const DEFAULT_FORM_THEME: FormTheme = {
+  backgroundType: "color",
+  backgroundColor: "#F4F5F7",
+  backgroundImageUrl: null,
+  primaryColor: "#3C50E0",
+  headerImageUrl: null,
+  headerText: null,
+  headerTextColor: "#1C2434",
+};

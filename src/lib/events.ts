@@ -1,5 +1,5 @@
 // src/lib/events.ts
-import { apiGet } from "@/lib/api-client";
+import { apiGet, apiUploadFile } from "@/lib/api-client";
 import { ApiEvent, EventDetail, RegistrationListItem, FormDefinitionDetail } from "@/utils/mindaras-api-types";
 import { ApiError } from "@/lib/api-client";
 
@@ -43,4 +43,9 @@ export function registerForEvent(eventId: string, payload: RegisterParticipantPa
     `/api/Registration/${eventId}/Register`,
     payload,
   );
+}
+
+// api call for uploading images
+export function uploadThemeImage(file: File) {
+  return apiUploadFile("/api/FormDefinition/UploadImage", file);
 }

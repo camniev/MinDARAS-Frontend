@@ -6,6 +6,7 @@ import { Input } from "@/components/tailgrids/core/input";
 import { Label } from "@/components/tailgrids/core/label";
 import { uploadThemeImage } from "@/lib/events";
 import { FormTheme } from "@/utils/mindaras-api-types";
+import { resolveAssetUrl } from "@/lib/resolve-asset-url";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +17,9 @@ type Props = {
 
 export default function ThemeEditor({ theme, onChange }: Props) {
   const [uploadingField, setUploadingField] = useState<"background" | "header" | null>(null);
+
+  const backgroundPreviewUrl = resolveAssetUrl(theme.backgroundImageUrl);
+  const headerPreviewUrl = resolveAssetUrl(theme.headerImageUrl);
 
   function update(patch: Partial<FormTheme>) {
     onChange({ ...theme, ...patch });
@@ -91,9 +95,9 @@ export default function ThemeEditor({ theme, onChange }: Props) {
               disabled={uploadingField === "background"}
               className="text-sm text-text-secondary"
             />
-            {theme.backgroundImageUrl && (
+            {backgroundPreviewUrl && (
               <img
-                src={theme.backgroundImageUrl}
+                src={backgroundPreviewUrl}
                 alt="Background preview"
                 className="h-20 w-full rounded-lg border border-card-border object-cover"
               />
@@ -131,9 +135,9 @@ export default function ThemeEditor({ theme, onChange }: Props) {
           disabled={uploadingField === "header"}
           className="text-sm text-text-secondary"
         />
-        {theme.headerImageUrl && (
+        {headerPreviewUrl && (
           <img
-            src={theme.headerImageUrl}
+            src={headerPreviewUrl}
             alt="Header preview"
             className="h-16 rounded-lg border border-card-border object-contain"
           />

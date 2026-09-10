@@ -45,3 +45,26 @@ export function apiPost<TResponse, TBody = unknown>(path: string, body: TBody) {
 export function apiGet<TResponse>(path: string) {
   return request<TResponse>(path, { method: "GET" });
 }
+
+export async function apiUploadFile(path: string, file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    body: formData, // no Content-Type header — browser sets the multipart boundary itself
+  });
+
+  if (!res.ok) {
+    let message = `Upload failed (${res.status})`;
+    try {
+      const body = await res.json();
+      message = body?.message ?? message;
+    } catch {
+      // not JSON — keep generic message
+    }
+    throw new ApiError(message, res.status);
+  }
+
+  return res.json();
+}

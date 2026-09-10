@@ -20,6 +20,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import FormFieldRow from "./form-field-row";
+import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
+import { FormTheme } from "@/utils/mindaras-api-types";
+import ThemeEditor from "./theme-editor";
 
 // TODO: replace with real authenticated user id once auth is wired up
 const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
@@ -39,6 +42,8 @@ export default function FormBuilderPageClient() {
   const [fields, setFields] = useState<BuilderField[]>(DEFAULT_BUILDER_FIELDS);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingForm, setIsLoadingForm] = useState(true);
+
+  const [theme, setTheme] = useState<FormTheme>(DEFAULT_FORM_THEME);
 
   useEffect(() => {
     if (!eventId) {
@@ -76,6 +81,7 @@ export default function FormBuilderPageClient() {
             locked: f.isLocked,
           })),
         );
+        if (existingForm.theme) setTheme(existingForm.theme);
       })
       .catch(() => toast.error("Couldn't load the existing form"))
       .finally(() => setIsLoadingForm(false));
@@ -144,6 +150,7 @@ export default function FormBuilderPageClient() {
           formName: formName.trim(),
           formDescription: formDescription.trim() || undefined,
           formFields,
+          theme,
       };
 
       console.log(JSON.stringify(payload, null, 2));
@@ -245,6 +252,10 @@ export default function FormBuilderPageClient() {
             {isLoadingForm ? "Loading form…" : isSaving ? "Saving…" : "Save Form"}
           </Button>
         </Card>
+      </div>
+      
+      <div className="px-2 lg:px-5">
+        <ThemeEditor theme={theme} onChange={setTheme} />
       </div>
     </div>
   );
