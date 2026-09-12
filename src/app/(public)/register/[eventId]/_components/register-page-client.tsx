@@ -1,6 +1,5 @@
 "use client";
 
-import { Card } from "@/components/tailgrids/core/card";
 import { ApiError } from "@/lib/api-client";
 import { fetchFormForEvent, registerForEvent } from "@/lib/events";
 import { resolveAssetUrl } from "@/lib/resolve-asset-url";
@@ -9,6 +8,14 @@ import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
 import { useEffect, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
+
+function Shell({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
+  return (
+    <div className="h-full w-full overflow-y-auto px-4 py-10" style={style}>
+      <div className="mx-auto w-full max-w-[640px]">{children}</div>
+    </div>
+  );
+}
 
 export default function RegisterPageClient({ eventId }: { eventId: string }) {
   const [form, setForm] = useState<FormDefinitionDetail | null>(null);
@@ -23,6 +30,7 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
   const theme = form?.theme ?? DEFAULT_FORM_THEME;
   const backgroundImageUrl = resolveAssetUrl(theme.backgroundImageUrl);
   const headerImageUrl = resolveAssetUrl(theme.headerImageUrl);
+  const accentColor = theme.primaryColor ?? "#3C50E0";
 
   const pageBackgroundStyle: React.CSSProperties =
     theme.backgroundType === "image" && backgroundImageUrl
@@ -76,27 +84,17 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
     }
   }
 
-  // shared page shell — every state (loading/error/success/form) renders through this
-  // so the themed background is consistent even before the form data arrives
-  function Shell({ children }: { children: React.ReactNode }) {
-    return (
-      <div className="flex w-full min-h-screen justify-center px-4 py-10" style={pageBackgroundStyle}>
-        <div className="w-full max-w-[640px]">{children}</div>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
-      <Shell>
-        <Card className="h-64 w-full animate-pulse bg-background-gray-secondary_alt" />
+      <Shell style={pageBackgroundStyle}>
+        <div className="h-64 w-full animate-pulse rounded-lg bg-white/70" />
       </Shell>
     );
   }
 
   if (confirmation) {
     return (
-      <Shell>
+      <Shell style={pageBackgroundStyle}>
         <RegistrationSuccess confirmation={confirmation} />
       </Shell>
     );
@@ -104,54 +102,74 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
 
   if (loadError || !form) {
     return (
-      <Shell>
-        <Card className="space-y-2 py-12 text-center">
-          <p className="text-sm text-text-tertiary">{loadError ?? "This form isn't available."}</p>
-        </Card>
+      <Shell style={pageBackgroundStyle}>
+        <div className="space-y-2 rounded-lg bg-white py-12 text-center shadow-sm">
+          <p className="text-sm text-gray-500">{loadError ?? "This form isn't available."}</p>
+        </div>
       </Shell>
     );
   }
 
   return (
-    <Shell>
-      <Card className="space-y-6 p-6 sm:p-8">
-        {headerImageUrl && (
-          <img src={headerImageUrl} alt="" className="mx-auto h-20 object-contain" />
-        )}
+    <Shell style={pageBackgroundStyle}>
+      {headerImageUrl && (
+        <img
+          src={headerImageUrl}
+          alt=""
+          className="mb-3 aspect-[4/1] w-full rounded-lg object-cover"
+        />
+      )}
 
-        <div>
-          <h1
-            className="text-xl leading-7 font-semibold"
-            style={{ color: theme.headerTextColor ?? undefined }}
-          >
-            {theme.headerText || form.formName}
-          </h1>
-          {form.formDescription && (
-            <p className="mt-1 text-sm leading-5 text-text-tertiary">{form.formDescription}</p>
-          )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="overflow-hidden rounded-lg bg-white shadow-sm">
+          <div className="h-2.5 w-full" style={{ backgroundColor: accentColor }} />
+          <div className="space-y-3 p-6">
+            <h1
+              className="text-[28px] leading-9 font-normal"
+              style={{ color: theme.headerTextColor ?? "#1C2434" }}
+            >
+              {theme.headerText || form.formName}
+            </h1>
+            {form.formDescription && (
+              <p className="border-t border-gray-100 pt-3 text-sm leading-6 text-gray-600">
+                {form.formDescription}
+              </p>
+            )}
+            <p className="text-xs text-red-600">* Required</p>
+          </div>
         </div>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          {form.formFields.map((field) => (
+        {form.formFields.map((field) => (
+          <div key={field.fieldId} className="rounded-lg bg-white p-4 shadow-sm sm:p-6">
             <DynamicFieldInput
-              key={field.fieldId}
               field={field}
               value={values[field.fieldId] ?? ""}
               onChange={(val) => setValues((prev) => ({ ...prev, [field.fieldId]: val }))}
               error={fieldErrors[field.fieldId]?.[0]}
+              accentColor={accentColor}
             />
-          ))}
+          </div>
+        ))}
 
+        <div className="flex items-center justify-between px-1">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg py-3 text-sm font-medium text-white disabled:opacity-60"
-            style={{ backgroundColor: theme.primaryColor ?? "#3C50E0" }}
+            className="rounded-md px-6 py-2 text-sm font-medium text-white shadow-sm transition disabled:opacity-60"
+            style={{ backgroundColor: accentColor }}
           >
-            {isSubmitting ? "Submitting…" : "Submit Registration"}
+            {isSubmitting ? "Submitting…" : "Submit"}
           </button>
-        </form>
-      </Card>
+          <button
+            type="button"
+            onClick={() => setValues({})}
+            className="text-sm font-medium"
+            style={{ color: accentColor }}
+          >
+            Clear form
+          </button>
+        </div>
+      </form>
     </Shell>
   );
 }

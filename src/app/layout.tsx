@@ -6,10 +6,10 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const geistInter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
+// const geistInter = Inter({
+//   variable: "--font-inter",
+//   subsets: ["latin"],
+// });
 
 export const metadata: Metadata = {
   title: {
@@ -29,7 +29,8 @@ export default function RootLayout({
     <html
       suppressHydrationWarning
       lang="en"
-      className={cn("h-full overflow-hidden antialiased", geistInter.className)}
+      // className={cn("h-full overflow-hidden antialiased", geistInter.className)}
+      className={cn("h-full overflow-hidden antialiased")}
     >
       <body className="h-full overflow-hidden bg-background-gray-secondary_alt_2">
         <ThemeProvider defaultTheme="light" enableSystem>

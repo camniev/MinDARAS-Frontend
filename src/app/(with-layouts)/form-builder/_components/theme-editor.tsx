@@ -9,6 +9,15 @@ import { FormTheme } from "@/utils/mindaras-api-types";
 import { resolveAssetUrl } from "@/lib/resolve-asset-url";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getCroppedImageBlob } from "@/utils/crop-image";
+import ImageCropModal from "./image-crop-modal";
+
+// add near the top of the file, outside the component
+const PRESET_COLORS = [
+  "#D93025", "#8E24AA", "#3949AB", "#1E88E5", "#039BE5", "#00ACC1",
+  "#F4511E", "#FB8C00", "#00897B", "#43A047", "#546E7A", "#757575",
+];
+const HEADER_BANNER_ASPECT = 4 / 1;
 
 type Props = {
   theme: FormTheme;
@@ -21,6 +30,8 @@ export default function ThemeEditor({ theme, onChange }: Props) {
   const backgroundPreviewUrl = resolveAssetUrl(theme.backgroundImageUrl);
   const headerPreviewUrl = resolveAssetUrl(theme.headerImageUrl);
 
+  const [pendingHeaderImage, setPendingHeaderImage] = useState<string | null>(null);
+
   function update(patch: Partial<FormTheme>) {
     onChange({ ...theme, ...patch });
   }
@@ -32,6 +43,26 @@ export default function ThemeEditor({ theme, onChange }: Props) {
       if (target === "background") update({ backgroundImageUrl: url, backgroundType: "image" });
       else update({ headerImageUrl: url });
       toast.success("Image uploaded");
+    } catch {
+      toast.error("Couldn't upload image");
+    } finally {
+      setUploadingField(null);
+    }
+  }
+
+  function handleHeaderFileSelect(file: File) {
+    const objectUrl = URL.createObjectURL(file);
+    setPendingHeaderImage(objectUrl); // opens the crop modal
+  }
+
+  async function handleCropApplied(blob: Blob) {
+    setPendingHeaderImage(null);
+    const croppedFile = new File([blob], "header-banner.png", { type: "image/png" });
+    setUploadingField("header");
+    try {
+      const { url } = await uploadThemeImage(croppedFile);
+      update({ headerImageUrl: url });
+      toast.success("Header image updated");
     } catch {
       toast.error("Couldn't upload image");
     } finally {
@@ -109,7 +140,23 @@ export default function ThemeEditor({ theme, onChange }: Props) {
       {/* Primary color */}
       <div className="space-y-2">
         <Label>Accent Color (buttons, links)</Label>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap gap-2">
+          {PRESET_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => update({ primaryColor: color })}
+              aria-label={`Set accent color to ${color}`}
+              className="flex size-8 items-center justify-center rounded-full border border-black/5"
+              style={{ backgroundColor: color }}
+            >
+              {theme.primaryColor?.toLowerCase() === color.toLowerCase() && (
+                <span className="text-xs font-bold text-white">✓</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 pt-1">
           <input
             type="color"
             value={theme.primaryColor ?? "#3C50E0"}
@@ -127,22 +174,41 @@ export default function ThemeEditor({ theme, onChange }: Props) {
 
       {/* Header logo/banner */}
       <div className="space-y-2">
-        <Label>Header Logo / Banner</Label>
+        <Label>Header Banner</Label>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], "header")}
+          onChange={(e) => e.target.files?.[0] && handleHeaderFileSelect(e.target.files[0])}
           disabled={uploadingField === "header"}
           className="text-sm text-text-secondary"
         />
         {headerPreviewUrl && (
-          <img
-            src={headerPreviewUrl}
-            alt="Header preview"
-            className="h-16 rounded-lg border border-card-border object-contain"
-          />
+          <div className="space-y-2">
+            <img
+              src={headerPreviewUrl}
+              alt="Header preview"
+              className="h-24 w-full rounded-lg border border-card-border object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => setPendingHeaderImage(headerPreviewUrl)}
+              className="text-xs font-medium text-brand-500 hover:underline"
+            >
+              Re-adjust crop
+            </button>
+          </div>
         )}
+        {uploadingField === "header" && <p className="text-xs text-text-tertiary">Uploading…</p>}
       </div>
+
+      {pendingHeaderImage && (
+        <ImageCropModal
+          imageSrc={pendingHeaderImage}
+          aspect={HEADER_BANNER_ASPECT}
+          onCancel={() => setPendingHeaderImage(null)}
+          onCropped={handleCropApplied}
+        />
+      )}
 
       {/* Header text override + color */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -1,89 +1,144 @@
 "use client";
 
-import { Checkbox } from "@/components/tailgrids/core/checkbox";
-import { Input } from "@/components/tailgrids/core/input";
-import { Label } from "@/components/tailgrids/core/label";
-import { TextArea } from "@/components/tailgrids/core/text-area";
 import { BuilderField } from "@/utils/mindaras-data";
 import { slugify } from "@/utils/slugify";
-import { Trash1 } from "@tailgrids/icons";
+import { Copy1, Plus, Trash1 } from "@tailgrids/icons";
 
 type Props = {
   field: BuilderField;
-  existingFieldNames: string[]; // other fields' fieldName values, for slug de-dup
+  existingFieldNames: string[];
   onChange: (updated: BuilderField) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
 };
 
-export default function FormFieldRow({ field, existingFieldNames, onChange, onRemove }: Props) {
+const TYPE_LABELS: Record<BuilderField["inputType"], string> = {
+  text: "Short answer",
+  email: "Email",
+  select: "Dropdown",
+  number: "Number",
+  date: "Date",
+  textarea: "Paragraph",
+  checkbox: "Checkboxes",
+};
+
+export default function FormFieldRow({ field, existingFieldNames, onChange, onRemove, onDuplicate }: Props) {
   function handleLabelChange(newLabel: string) {
     onChange({
       ...field,
       label: newLabel,
-      // keep fieldName in sync with the label unless it's a locked/default
-      // field, whose technical key should stay stable once created
       fieldName: field.locked ? field.fieldName : slugify(newLabel, existingFieldNames),
     });
   }
 
-  function handleOptionsTextChange(text: string) {
-    const options = text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-    onChange({ ...field, options });
+  function updateOption(index: number, value: string) {
+    const next = [...field.options];
+    next[index] = value;
+    onChange({ ...field, options: next });
+  }
+
+  function addOption() {
+    onChange({ ...field, options: [...field.options, `Option ${field.options.length + 1}`] });
+  }
+
+  function removeOption(index: number) {
+    onChange({ ...field, options: field.options.filter((_, i) => i !== index) });
   }
 
   return (
-    <div className="group relative space-y-3 rounded-xl border border-card-border p-4">
-      {!field.locked && (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${field.label || "field"}`}
-          className="absolute -top-2.5 -right-2.5 z-10 flex size-6 items-center justify-center rounded-full border border-card-border bg-card-background text-icon-secondary opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-red-600"
-        >
-          <Trash1 className="size-3.5" />
-        </button>
-      )}
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 space-y-1">
-          <Label className="text-xs text-text-tertiary">Field Label</Label>
-          <Input
+    <div className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+      <div className="space-y-4 p-5 pl-6 sm:p-6 sm:pl-7">
+        <div className="flex items-start justify-between gap-4">
+          <input
             value={field.label}
             onChange={(e) => handleLabelChange(e.target.value)}
-            placeholder="e.g. Office"
-            className="w-full"
+            placeholder="Question"
             disabled={field.locked}
+            className="w-full border-0 border-b border-transparent bg-transparent pb-1.5 text-base font-normal text-text-primary placeholder:text-text-tertiary focus:border-b-2 focus:border-brand-500 focus:outline-none disabled:text-text-secondary"
           />
+          <span className="shrink-0 rounded-md bg-background-gray-secondary_alt px-2.5 py-1 text-xs font-medium text-text-tertiary">
+            {TYPE_LABELS[field.inputType]}
+          </span>
         </div>
 
-        <label className="flex shrink-0 items-center gap-2 pt-4 text-xs text-text-secondary">
-          <Checkbox
-            isSelected={field.required}
-            onChange={(isSelected) => onChange({ ...field, required: isSelected })}
-            isDisabled={field.locked}
-          />
-          Required
-        </label>
+        <p className="-mt-2 font-mono text-[11px] text-text-tertiary">key: {field.fieldName || "—"}</p>
+
+        {field.inputType === "select" && (
+          <div className="space-y-2">
+            {field.options.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="size-4 shrink-0 rounded-full border border-gray-300" />
+                <input
+                  value={opt}
+                  onChange={(e) => updateOption(i, e.target.value)}
+                  className="w-full border-0 border-b border-gray-200 bg-transparent py-1 text-sm text-text-secondary focus:border-brand-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeOption(i)}
+                  aria-label="Remove option"
+                  className="text-text-tertiary hover:text-red-600"
+                >
+                  <Trash1 className="size-3.5" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addOption}
+              className="flex items-center gap-1.5 text-sm text-brand-500 hover:underline"
+            >
+              <Plus className="size-3.5" />
+              Add option
+            </button>
+          </div>
+        )}
+
+        {field.locked && (
+          <p className="text-xs text-text-tertiary italic">
+            This is a default field — its type and technical key can&apos;t be changed.
+          </p>
+        )}
+
+        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onDuplicate}
+              aria-label="Duplicate question"
+              className="rounded-md p-2 text-text-tertiary hover:bg-background-gray-secondary_alt hover:text-text-primary"
+            >
+              <Copy1 className="size-4" />
+            </button>
+            {!field.locked && (
+              <button
+                type="button"
+                onClick={onRemove}
+                aria-label="Delete question"
+                className="rounded-md p-2 text-text-tertiary hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash1 className="size-4" />
+              </button>
+            )}
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            Required
+            <button
+              type="button"
+              role="switch"
+              aria-checked={field.required}
+              onClick={() => !field.locked && onChange({ ...field, required: !field.required })}
+              disabled={field.locked}
+              className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${
+                field.required ? "justify-end bg-brand-500" : "justify-start bg-gray-300"
+              } disabled:opacity-60`}
+            >
+              <span className="size-4 rounded-full bg-white shadow-sm" />
+            </button>
+          </label>
+        </div>
       </div>
-
-      <p className="font-mono text-[11px] text-text-tertiary">
-        key: {field.fieldName || "—"}
-      </p>
-
-      {field.inputType === "select" && (
-        <div className="space-y-1">
-          <Label className="text-xs text-text-tertiary">Options (one per line)</Label>
-          <TextArea
-            rows={3}
-            value={field.options.join("\n")}
-            onChange={(e) => handleOptionsTextChange(e.target.value)}
-            placeholder={"General Admission\nVIP Pass\nStudent"}
-          />
-        </div>
-      )}
     </div>
   );
 }

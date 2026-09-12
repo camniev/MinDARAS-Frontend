@@ -1,18 +1,5 @@
 "use client";
 
-import { Checkbox } from "@/components/tailgrids/core/checkbox";
-import { Input } from "@/components/tailgrids/core/input";
-import { Label } from "@/components/tailgrids/core/label";
-import {
-  Select,
-  SelectContent,
-  SelectIndicator,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/tailgrids/core/select";
-import { TextArea } from "@/components/tailgrids/core/text-area";
-import { TextField } from "@/components/tailgrids/core/text-field";
 import { FormFieldDetail } from "@/utils/mindaras-api-types";
 
 type Props = {
@@ -20,32 +7,41 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  accentColor: string;
 };
 
-export default function DynamicFieldInput({ field, value, onChange, error }: Props) {
+export default function DynamicFieldInput({ field, value, onChange, error, accentColor }: Props) {
   const options: string[] = field.options ? JSON.parse(field.options) : [];
+  const accentStyle = { "--accent-color": accentColor } as React.CSSProperties;
+
+  const labelBlock = (
+    <div className="mb-2">
+      <span className="text-sm font-normal text-[#1C2434]">
+        {field.fieldLabel}
+        {field.isRequired && <span className="ml-0.5 text-red-600">*</span>}
+      </span>
+    </div>
+  );
 
   if (field.fieldType === "select") {
     return (
-      <div className="flex flex-col gap-1.5">
-        <Select value={value} onChange={(val) => onChange(val as string)} className="w-full" aria-label={field.fieldLabel}>
-          <Label>
-            {field.fieldLabel}
-            {field.isRequired && <span className="text-red-500"> *</span>}
-          </Label>
-          <SelectTrigger className="w-full border-card-border">
-            <SelectValue placeholder="Select an option" />
-            <SelectIndicator />
-          </SelectTrigger>
-          <SelectContent className="min-w-(--trigger-width)">
-            {options.map((opt) => (
-              <SelectItem key={opt} id={opt} textValue={opt}>
-                {opt}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+      <div style={accentStyle}>
+        {labelBlock}
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm text-[#1C2434] focus:border-b-2 focus:border-[var(--accent-color)] focus:outline-none"
+        >
+          <option value="" disabled>
+            Choose
+          </option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
     );
   }
@@ -59,49 +55,54 @@ export default function DynamicFieldInput({ field, value, onChange, error }: Pro
     }
 
     return (
-      <div className="space-y-2">
-        <Label>
-          {field.fieldLabel}
-          {field.isRequired && <span className="text-red-500"> *</span>}
-        </Label>
-        <div className="space-y-1.5">
+      <div style={accentStyle}>
+        {labelBlock}
+        <div className="space-y-2.5">
           {options.map((opt) => (
-            <Checkbox key={opt} isSelected={selected.includes(opt)} onChange={() => toggle(opt)}>
+            <label key={opt} className="flex cursor-pointer items-center gap-3 text-sm text-[#1C2434]">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt)}
+                onChange={() => toggle(opt)}
+                className="size-4 accent-[var(--accent-color)]"
+              />
               {opt}
-            </Checkbox>
+            </label>
           ))}
         </div>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
     );
   }
 
   if (field.fieldType === "textarea") {
     return (
-      <TextField className="gap-1.5">
-        <Label>
-          {field.fieldLabel}
-          {field.isRequired && <span className="text-red-500"> *</span>}
-        </Label>
-        <TextArea rows={3} value={value} onChange={(e) => onChange(e.target.value)} />
-        {error && <p className="text-xs text-red-600">{error}</p>}
-      </TextField>
+      <div style={accentStyle}>
+        {labelBlock}
+        <textarea
+          rows={3}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Your answer"
+          className="w-full resize-none border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm text-[#1C2434] placeholder:text-gray-400 focus:border-b-2 focus:border-[var(--accent-color)] focus:outline-none"
+        />
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
     );
   }
 
+  // text / email / number / date
   return (
-    <TextField className="gap-1.5">
-      <Label>
-        {field.fieldLabel}
-        {field.isRequired && <span className="text-red-500"> *</span>}
-      </Label>
-      <Input
+    <div style={accentStyle}>
+      {labelBlock}
+      <input
         type={field.fieldType}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full"
+        placeholder={field.fieldType === "date" ? undefined : "Your answer"}
+        className="w-full border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm text-[#1C2434] placeholder:text-gray-400 focus:border-b-2 focus:border-[var(--accent-color)] focus:outline-none"
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
-    </TextField>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
   );
 }

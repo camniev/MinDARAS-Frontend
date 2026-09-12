@@ -15,7 +15,7 @@ import {
   DEFAULT_BUILDER_FIELDS,
 } from "@/utils/mindaras-data";
 import { ApiEvent, FormFieldPayload } from "@/utils/mindaras-api-types";
-import { Plus } from "@tailgrids/icons";
+import { Close, ColourPalette3, Plus } from "@tailgrids/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import FormFieldRow from "./form-field-row";
 import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
 import { FormTheme } from "@/utils/mindaras-api-types";
 import ThemeEditor from "./theme-editor";
+import { slugify } from "@/utils/slugify";
 
 // TODO: replace with real authenticated user id once auth is wired up
 const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
@@ -44,6 +45,7 @@ export default function FormBuilderPageClient() {
   const [isLoadingForm, setIsLoadingForm] = useState(true);
 
   const [theme, setTheme] = useState<FormTheme>(DEFAULT_FORM_THEME);
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
 
   useEffect(() => {
     if (!eventId) {
@@ -116,6 +118,23 @@ export default function FormBuilderPageClient() {
     setFields((prev) => prev.filter((f) => f.key !== key));
   }
 
+  function duplicateField(key: string) {
+    const original = fields.find((f) => f.key === key);
+    if (!original || original.locked) return;
+
+    fieldCounter += 1;
+    setFields((prev) => {
+      const index = prev.findIndex((f) => f.key === key);
+      const copy: BuilderField = {
+        ...original,
+        key: `copy-${fieldCounter}`,
+        label: `${original.label} (copy)`,
+        fieldName: slugify(`${original.label} copy`, prev.map((f) => f.fieldName)),
+      };
+      return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)];
+    });
+  }
+
   async function handleSave() {
     if (!eventId) {
       toast.error("No event selected — create or open an event first.");
@@ -168,8 +187,8 @@ export default function FormBuilderPageClient() {
   }
 
   return (
-    <div className="mt-6 space-y-5">
-      <div className="flex flex-col-reverse items-start justify-between gap-3 px-2 sm:flex-row sm:items-center lg:px-6">
+    <div className="relative mt-6">
+      <div className="flex flex-col-reverse items-start justify-between gap-3 px-2 pb-5 sm:flex-row sm:items-center lg:px-6">
         <div>
           <h1 className="mb-1 text-[28px] leading-8 font-medium text-text-primary">
             Registration Form Builder
@@ -194,69 +213,129 @@ export default function FormBuilderPageClient() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 px-2 lg:grid-cols-3 lg:px-5">
-        <Card className="h-fit space-y-2 p-5 lg:col-span-1">
-          <h2 className="font-semibold text-text-primary">Add Form Fields</h2>
-          <div className="space-y-2">
+      {/* Centered canvas — matches Google Forms' single-column document view */}
+      <div className="mx-auto max-w-[720px] space-y-4 px-2 pb-24 lg:px-0">
+        <TextField className="gap-1.5">
+          <Label htmlFor="form-name" className="sr-only">
+            Form Name
+          </Label>
+          <div className="overflow-hidden rounded-lg bg-white shadow-sm">
+            <div className="h-2 w-full bg-brand-500" />
+            <div className="space-y-3 p-6">
+              <Input
+                id="form-name"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="Untitled Form"
+                className="w-full border-0 border-b border-transparent bg-transparent p-0 text-2xl font-normal focus:border-b-2 focus:border-brand-500 focus:outline-none"
+              />
+              <TextArea
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Form description"
+                rows={2}
+                className="w-full resize-none border-0 border-b border-gray-100 bg-transparent p-0 text-sm text-text-secondary focus:border-brand-500 focus:outline-none"
+              />
+            </div>
+          </div>
+        </TextField>
+
+        {fields.map((field) => (
+          <FormFieldRow
+            key={field.key}
+            field={field}
+            existingFieldNames={fields.filter((f) => f.key !== field.key).map((f) => f.fieldName)}
+            onChange={(updated) => updateField(field.key, updated)}
+            onRemove={() => removeField(field.key)}
+            onDuplicate={() => duplicateField(field.key)}
+          />
+        ))}
+
+        <Button onClick={handleSave} className="w-full py-3" isDisabled={isSaving || isLoadingForm || !eventId}>
+          {isLoadingForm ? "Loading form…" : isSaving ? "Saving…" : "Save Form"}
+        </Button>
+      </div>
+
+      {/* Floating add-question toolbar — mirrors the vertical icon rail in Google Forms */}
+      <div className="fixed top-32 right-4 z-20 hidden w-44 flex-col gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-lg lg:flex">
+        <p className="px-2 pt-1 pb-2 text-[11px] font-semibold tracking-wide text-text-tertiary uppercase">
+          Add a question
+        </p>
+        {AVAILABLE_FIELD_TYPES.map((fieldType) => (
+          <button
+            key={fieldType.id}
+            type="button"
+            onClick={() => addField(fieldType.id)}
+            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-text-secondary transition hover:bg-background-gray-secondary_alt hover:text-brand-500"
+          >
+            <Plus className="size-4 shrink-0" />
+            <span>{fieldType.label}</span>
+          </button>
+        ))}
+        <div className="my-1 border-t border-gray-100" />
+        <button
+          type="button"
+          onClick={() => setIsThemeOpen(true)}
+          className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-text-secondary transition hover:bg-background-gray-secondary_alt hover:text-brand-500"
+        >
+          <ColourPalette3 className="size-4 shrink-0" />
+          <span>Customize theme</span>
+        </button>
+      </div>
+
+      {/* Mobile fallback — the floating rail above only shows lg+; small screens get inline controls */}
+      <div className="mx-auto max-w-[720px] space-y-3 px-2 lg:hidden">
+        <Card className="space-y-2 p-4">
+          <p className="text-xs font-semibold text-text-tertiary uppercase">Add a question</p>
+          <div className="flex flex-wrap gap-2">
             {AVAILABLE_FIELD_TYPES.map((fieldType) => (
               <button
                 key={fieldType.id}
                 type="button"
                 onClick={() => addField(fieldType.id)}
-                className="flex w-full items-center justify-between rounded-xl border border-card-border p-3 text-sm font-medium text-text-primary transition hover:bg-background-gray-secondary_alt"
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-text-secondary hover:bg-background-gray-secondary_alt"
               >
-                <span>{fieldType.label}</span>
-                <Plus className="size-4 text-icon-secondary" />
+                + {fieldType.label}
               </button>
             ))}
           </div>
         </Card>
-
-        <Card className="space-y-6 p-6 shadow-sm lg:col-span-2">
-          <div className="space-y-4 border-b border-card-border pb-6">
-            <TextField className="gap-1.5">
-              <Label htmlFor="form-name">Form Name</Label>
-              <Input
-                id="form-name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Event Registration"
-                className="w-full"
-              />
-            </TextField>
-            <TextField className="gap-1.5">
-              <Label htmlFor="form-description">Form Description</Label>
-              <TextArea
-                id="form-description"
-                rows={2}
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="What should participants know before filling this out?"
-              />
-            </TextField>
-          </div>
-
-          <div className="space-y-4">
-            {fields.map((field) => (
-              <FormFieldRow
-                key={field.key}
-                field={field}
-                existingFieldNames={fields.filter((f) => f.key !== field.key).map((f) => f.fieldName)}
-                onChange={(updated) => updateField(field.key, updated)}
-                onRemove={() => removeField(field.key)}
-              />
-            ))}
-          </div>
-
-          <Button onClick={handleSave} className="w-full py-3" isDisabled={isSaving || isLoadingForm || !eventId}>
-            {isLoadingForm ? "Loading form…" : isSaving ? "Saving…" : "Save Form"}
-          </Button>
-        </Card>
+        <Button
+          appearance="outline"
+          onClick={() => setIsThemeOpen(true)}
+          className="w-full gap-2"
+        >
+          <ColourPalette3 className="size-4" />
+          Customize theme
+        </Button>
       </div>
-      
-      <div className="px-2 lg:px-5">
-        <ThemeEditor theme={theme} onChange={setTheme} />
-      </div>
+
+      {/* Slide-in theme panel */}
+      {isThemeOpen && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-black/30"
+          onClick={() => setIsThemeOpen(false)}
+        >
+          <div
+            className="flex h-full w-full max-w-md flex-col bg-background-gray-secondary_alt_2 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+              <h2 className="text-lg font-semibold text-text-primary">Customize Theme</h2>
+              <button
+                type="button"
+                onClick={() => setIsThemeOpen(false)}
+                className="rounded-md p-1.5 text-text-tertiary hover:bg-background-gray-secondary_alt"
+              >
+                <Close className="size-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <ThemeEditor theme={theme} onChange={setTheme} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

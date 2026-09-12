@@ -1,3 +1,4 @@
+// src/app/(public)/layout.tsx
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <div className="h-full">{children}</div>;
 }
