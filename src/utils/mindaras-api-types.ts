@@ -38,6 +38,16 @@ export type EventCategory = {
 };
 // end payloads for events
 
+// type for FormDefinitionDetail
+export type FormDefinitionDetail = {
+  formId: string;
+  formName: boolean;
+  isActive: true;
+  formDescription: string | null;
+  formFields: FormFieldDetail[];
+  theme: FormTheme | null;
+};
+
 // new types and payload for form definition and form fields
 export type FormFieldDetail = {
   fieldId: string;
@@ -59,15 +69,6 @@ export type FormTheme = {
   headerImageUrl: string | null;
   headerText: string | null;
   headerTextColor: string | null;
-};
-
-// type for FormDefinitionDetail
-export type FormDefinitionDetail = {
-  formId: string;
-  formName: string;
-  formDescription: string | null;
-  formFields: FormFieldDetail[];
-  theme: FormTheme | null;
 };
 
 export type FormFieldPayload = {

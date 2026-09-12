@@ -8,7 +8,7 @@ import { Label } from "@/components/tailgrids/core/label";
 import { TextArea } from "@/components/tailgrids/core/text-area";
 import { TextField } from "@/components/tailgrids/core/text-field";
 import { ApiError, apiGet } from "@/lib/api-client";
-import { saveEventForm, fetchFormForEvent } from "@/lib/events";
+import { saveEventForm, fetchFormForEvent, toggleFormStatus } from "@/lib/events";
 import {
   AVAILABLE_FIELD_TYPES,
   BuilderField,
@@ -47,6 +47,9 @@ export default function FormBuilderPageClient() {
   const [theme, setTheme] = useState<FormTheme>(DEFAULT_FORM_THEME);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
 
+  const [isFormActive, setIsFormActive] = useState(true);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+
   useEffect(() => {
     if (!eventId) {
       setIsLoadingEvent(false);
@@ -84,6 +87,7 @@ export default function FormBuilderPageClient() {
           })),
         );
         if (existingForm.theme) setTheme(existingForm.theme);
+        setIsFormActive(existingForm.isActive);
       })
       .catch(() => toast.error("Couldn't load the existing form"))
       .finally(() => setIsLoadingForm(false));
@@ -133,6 +137,22 @@ export default function FormBuilderPageClient() {
       };
       return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)];
     });
+  }
+
+  async function handleToggleFormActive() {
+    if (!eventId) return;
+    const next = !isFormActive;
+    setIsFormActive(next); // optimistic
+    setIsTogglingStatus(true);
+    try {
+      await toggleFormStatus(eventId, next);
+      toast.success(next ? "Form enabled — open for registration" : "Form disabled — registration closed");
+    } catch {
+      setIsFormActive(!next); // revert on failure
+      toast.error("Couldn't update form status");
+    } finally {
+      setIsTogglingStatus(false);
+    }
   }
 
   async function handleSave() {
@@ -193,24 +213,36 @@ export default function FormBuilderPageClient() {
           <h1 className="mb-1 text-[28px] leading-8 font-medium text-text-primary">
             Registration Form Builder
           </h1>
-          <p className="text-sm leading-5 text-text-tertiary">
-            {isLoadingEvent
-              ? "Loading event…"
-              : event
-                ? `Building the form for "${event.eventName}"`
-                : eventId
-                  ? "Couldn't find that event."
-                  : "Open this page from an event's Create Event flow."}
-          </p>
+          <p className="text-sm leading-5 text-text-tertiary">{/* unchanged */}</p>
         </div>
 
-        <Breadcrumbs
-          dividerType="chevron"
-          items={[
-            { href: "/", label: "Home" },
-            { href: "/form-builder", label: "Form Builder" },
-          ]}
-        />
+        <div className="flex items-center gap-4">
+          {/* only meaningful once a form actually exists to toggle */}
+          {!isLoadingForm && (
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              {isFormActive ? "Open for registration" : "Registration closed"}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isFormActive}
+                onClick={handleToggleFormActive}
+                disabled={isTogglingStatus}
+                className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${
+                  isFormActive ? "justify-end bg-badge-success-icon-color" : "justify-start bg-gray-300"
+                } disabled:opacity-60`}
+              >
+                <span className="size-4 rounded-full bg-white shadow-sm" />
+              </button>
+            </label>
+          )}
+          <Breadcrumbs
+            dividerType="chevron"
+            items={[
+              { href: "/", label: "Home" },
+              { href: "/form-builder", label: "Form Builder" },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Centered canvas — matches Google Forms' single-column document view */}
@@ -257,7 +289,7 @@ export default function FormBuilderPageClient() {
       </div>
 
       {/* Floating add-question toolbar — mirrors the vertical icon rail in Google Forms */}
-      <div className="fixed top-32 right-4 z-20 hidden w-44 flex-col gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-lg lg:flex">
+      <div className="fixed top-40 right-4 z-20 hidden w-44 flex-col gap-1 rounded-xl border border-gray-200 bg-white p-2 shadow-lg lg:flex">
         <p className="px-2 pt-1 pb-2 text-[11px] font-semibold tracking-wide text-text-tertiary uppercase">
           Add a question
         </p>

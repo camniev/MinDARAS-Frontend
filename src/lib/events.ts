@@ -1,5 +1,5 @@
 // src/lib/events.ts
-import { apiGet, apiUploadFile } from "@/lib/api-client";
+import { apiGet, apiPut, apiUploadFile } from "@/lib/api-client";
 import { ApiEvent, EventDetail, RegistrationListItem, FormDefinitionDetail } from "@/utils/mindaras-api-types";
 import { ApiError } from "@/lib/api-client";
 
@@ -48,4 +48,12 @@ export function registerForEvent(eventId: string, payload: RegisterParticipantPa
 // api call for uploading images
 export function uploadThemeImage(file: File) {
   return apiUploadFile("/api/FormDefinition/UploadImage", file);
+}
+
+// api call for activating/deactivating event forms
+export async function toggleFormStatus(eventId: string, isActive: boolean) {
+  return apiPut<{ message: string; isActive: boolean }, { isActive: boolean }>(
+    `/api/FormDefinition/${eventId}/Form/Status`,
+    { isActive },
+  );
 }

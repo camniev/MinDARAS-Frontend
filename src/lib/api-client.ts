@@ -46,6 +46,10 @@ export function apiGet<TResponse>(path: string) {
   return request<TResponse>(path, { method: "GET" });
 }
 
+export function apiPut<TResponse, TBody = unknown>(path: string, body: TBody) {
+  return request<TResponse>(path, { method: "PUT", body: JSON.stringify(body) });
+}
+
 export async function apiUploadFile(path: string, file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append("file", file);

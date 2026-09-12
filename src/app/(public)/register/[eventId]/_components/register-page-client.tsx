@@ -1,13 +1,14 @@
 "use client";
 
 import { ApiError } from "@/lib/api-client";
-import { fetchFormForEvent, registerForEvent } from "@/lib/events";
+import { fetchEventById, fetchFormForEvent, registerForEvent } from "@/lib/events";
 import { resolveAssetUrl } from "@/lib/resolve-asset-url";
-import { FormDefinitionDetail, RegistrationConfirmation } from "@/utils/mindaras-api-types";
+import { EventDetail, FormDefinitionDetail, RegistrationConfirmation } from "@/utils/mindaras-api-types";
 import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
 import { useEffect, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
+import { deriveStatus } from "@/utils/map-api-event";
 
 function Shell({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
   return (
@@ -27,6 +28,8 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<RegistrationConfirmation | null>(null);
 
+  const [event, setEvent] = useState<EventDetail | null>(null);
+
   const theme = form?.theme ?? DEFAULT_FORM_THEME;
   const backgroundImageUrl = resolveAssetUrl(theme.backgroundImageUrl);
   const headerImageUrl = resolveAssetUrl(theme.headerImageUrl);
@@ -43,13 +46,14 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
       : { backgroundColor: theme.backgroundColor ?? "#F4F5F7" };
 
   useEffect(() => {
-    fetchFormForEvent(eventId)
-      .then((data) => {
-        if (!data) {
+    Promise.all([fetchFormForEvent(eventId), fetchEventById(eventId)])
+      .then(([formData, eventData]) => {
+        if (!formData) {
           setLoadError("Registration isn't open for this event yet.");
           return;
         }
-        setForm(data);
+        setForm(formData);
+        setEvent(eventData);
       })
       .catch(() => setLoadError("Couldn't load the registration form."))
       .finally(() => setIsLoading(false));
@@ -105,6 +109,26 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
       <Shell style={pageBackgroundStyle}>
         <div className="space-y-2 rounded-lg bg-white py-12 text-center shadow-sm">
           <p className="text-sm text-gray-500">{loadError ?? "This form isn't available."}</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  const eventStatus = event ? deriveStatus(event.eventStartDate, event.eventEndDate) : null;
+  const isRegistrationOpen = form?.isActive && eventStatus === "Upcoming";
+
+  // ...after the existing isLoading / confirmation / loadError checks, before the main return:
+  if (!isRegistrationOpen) {
+    return (
+      <Shell style={pageBackgroundStyle}>
+        <div className="space-y-2 rounded-lg bg-white py-12 text-center shadow-sm">
+          <p className="text-sm text-gray-500">
+            {eventStatus === "Completed"
+              ? "This event has already taken place."
+              : eventStatus === "Ongoing"
+                ? "This event is currently underway — registration is closed."
+                : "Registration for this event is currently closed."}
+          </p>
         </div>
       </Shell>
     );

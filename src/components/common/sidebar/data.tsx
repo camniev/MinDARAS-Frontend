@@ -84,18 +84,6 @@ export const NAV_DATA = [
         items: [],
       },
       {
-        title: "Form Builder",
-        url: "/form-builder",
-        icon: <FormBuilderIcon />,
-        items: [],
-      },
-      {
-        title: "Registration List",
-        url: "/registrations",
-        icon: <UserGroupIcon />,
-        items: [],
-      },
-      {
         title: "QR Attendance",
         url: "/qr-attendance",
         icon: <QrCodeIcon />,

@@ -20,6 +20,7 @@ import {
 import { ApiError } from "@/lib/api-client";
 import { fetchEventById, fetchFormForEvent, fetchRegistrationsForEvent } from "@/lib/events";
 import { cn } from "@/utils/cn";
+import { deriveStatus } from "@/utils/map-api-event";
 import {
   EventDetail,
   FormDefinitionDetail,
@@ -193,6 +194,9 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
 
   const hasForm = Boolean(form);
 
+  const eventStatus = deriveStatus(event.eventStartDate, event.eventEndDate);
+  const isRegistrationOpen = hasForm && form!.isActive && eventStatus === "Upcoming";
+
   return (
     <div className="mt-6 space-y-5">
       <div className="flex flex-col-reverse items-start justify-between gap-3 px-2 sm:flex-row sm:items-center lg:px-6">
@@ -254,6 +258,11 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
             {/* form actions live here, next to the event's own metadata —
                 not floating above the table where they compete with search/export */}
             <div className="flex flex-wrap gap-3">
+              {hasForm && (
+                <Badge color={isRegistrationOpen ? "success" : "gray"} size="sm">
+                  {isRegistrationOpen ? "Open for Registration" : "Registration Closed"}
+                </Badge>
+              )}
               {hasForm && (
                 <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={handleCopyRegistrationLink}>
                   <Copy1 className="size-4" />
