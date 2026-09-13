@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { AuthProvider } from "@/context/auth-context";
 
 // const geistInter = Inter({
 //   variable: "--font-inter",
@@ -34,7 +35,7 @@ export default function RootLayout({
     >
       <body className="h-full overflow-hidden bg-background-gray-secondary_alt_2">
         <ThemeProvider defaultTheme="light" enableSystem>
-          <Providers>{children}</Providers>
+            <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
         <Toaster />
       </body>

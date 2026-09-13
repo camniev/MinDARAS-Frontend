@@ -196,3 +196,17 @@ export type ChangePasswordPayload = {
   currentPassword: string;
   newPassword: string;
 };
+
+// type for decoding jwt
+export type DecodedAccessToken = {
+  nameid: string; // userId
+  unique_name: string; // username
+  role: string; // e.g. "Administrator"
+  given_name: string; // employee display name
+  mustChangePasswordOnFirstLogin: string; // "true" | "false" — string, not boolean, per your JWT
+  nbf: number;
+  exp: number;
+  iat: number;
+  iss: string;
+  aud: string;
+};

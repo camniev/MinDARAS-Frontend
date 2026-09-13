@@ -1,4 +1,6 @@
-// src/lib/api-client.ts
+// src/lib/api-client.ts — full rewrite
+import { getAccessToken, setAccessToken } from "@/lib/auth-token-store";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5226";
 
 export class ApiError extends Error {
@@ -11,11 +13,60 @@ export class ApiError extends Error {
   }
 }
 
-async function request<TResponse>(path: string, options: RequestInit): Promise<TResponse> {
+let refreshPromise: Promise<string | null> | null = null;
+
+// Ensures concurrent 401s only trigger ONE refresh call, not one per failed request.
+async function refreshTokenOnce(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/Auth/refresh-token`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        setAccessToken(null);
+        return null;
+      }
+      const data = await res.json();
+      setAccessToken(data.accessToken);
+      return data.accessToken as string;
+    } catch {
+      setAccessToken(null);
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+type RequestOptions = RequestInit & { skipAuthRetry?: boolean };
+
+async function request<TResponse>(path: string, options: RequestOptions): Promise<TResponse> {
+  const token = getAccessToken();
+
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
   });
+
+  if (res.status === 401 && !options.skipAuthRetry) {
+    const newToken = await refreshTokenOnce();
+    if (newToken) {
+      // retry exactly once with the fresh token — skipAuthRetry prevents an infinite loop
+      // if the retry itself somehow gets another 401
+      return request<TResponse>(path, { ...options, skipAuthRetry: true });
+    }
+    // refresh failed — session is genuinely over
+    throw new ApiError("Session expired. Please log in again.", 401);
+  }
 
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
@@ -29,7 +80,7 @@ async function request<TResponse>(path: string, options: RequestInit): Promise<T
         message = body?.message ?? message;
       }
     } catch {
-      // not JSON — keep the generic message
+      // not JSON — keep generic message
     }
     throw new ApiError(message, res.status, fieldErrors);
   }
@@ -38,25 +89,35 @@ async function request<TResponse>(path: string, options: RequestInit): Promise<T
   return (text ? JSON.parse(text) : {}) as TResponse;
 }
 
-export function apiPost<TResponse, TBody = unknown>(path: string, body: TBody) {
-  return request<TResponse>(path, { method: "POST", body: JSON.stringify(body) });
+export function apiPost<TResponse, TBody = unknown>(
+  path: string,
+  body: TBody,
+  options?: RequestOptions,
+) {
+  return request<TResponse>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined, ...options });
 }
 
-export function apiGet<TResponse>(path: string) {
-  return request<TResponse>(path, { method: "GET" });
+export function apiPut<TResponse, TBody = unknown>(
+  path: string,
+  body: TBody,
+  options?: RequestOptions,
+) {
+  return request<TResponse>(path, { method: "PUT", body: JSON.stringify(body), ...options });
 }
 
-export function apiPut<TResponse, TBody = unknown>(path: string, body: TBody) {
-  return request<TResponse>(path, { method: "PUT", body: JSON.stringify(body) });
+export function apiGet<TResponse>(path: string, options?: RequestOptions) {
+  return request<TResponse>(path, { method: "GET", ...options });
 }
 
 export async function apiUploadFile(path: string, file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append("file", file);
+  const token = getAccessToken();
 
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
-    body: formData, // no Content-Type header — browser sets the multipart boundary itself
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
   });
 
   if (!res.ok) {
@@ -65,7 +126,7 @@ export async function apiUploadFile(path: string, file: File): Promise<{ url: st
       const body = await res.json();
       message = body?.message ?? message;
     } catch {
-      // not JSON — keep generic message
+      // not JSON
     }
     throw new ApiError(message, res.status);
   }
