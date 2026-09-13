@@ -13,10 +13,4 @@ export const tabsItems = [
     title: "Security",
     description: "Set your password, authentication & etc",
   },
-  {
-    href: "/profile/notification",
-    icon: <BellIcon />,
-    title: "Notification",
-    description: "Customize your notification preferences",
-  },
 ];

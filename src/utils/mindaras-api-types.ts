@@ -148,3 +148,51 @@ export type ScanResult = {
   participantCode: string | null;
   checkInTime: string | null;
 };
+
+// types/fields for user and employee details
+export type EmployeeDetail = {
+  empId: string;
+  empName: string;
+  emailAddress: string;
+  position: string;
+  divisionOfficeId: string;
+};
+
+export type UserProfile = {
+  userId: string;
+  userName: string;
+  emailAddress: string;
+  isActive: boolean;
+  mustChangePasswordOnFirstLogin: boolean;
+  datePasswordLastSet: string;
+  userTypeId: string;
+  employee: EmployeeDetail;
+};
+
+export type DivisionOffice = {
+  divisionOfficeId: string;
+  divisionOfficeName: string;
+  divisionfficeAbbrev: string;
+};
+
+export type UserType = {
+  userTypeId: string;
+  userTypeDesc: string;
+  isActive: boolean;
+};
+
+export type UpdateUserProfilePayload = {
+  userName: string;
+  emailAddress: string;
+  userTypeId: string;
+  employee: {
+    empName: string;
+    position: string;
+    divisionOfficeId: string;
+  };
+};
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};

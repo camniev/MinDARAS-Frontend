@@ -18,17 +18,51 @@ import {
 import { Label } from "@/components/tailgrids/core/label";
 import { Backdrop, OverlayWrapper } from "@/components/tailgrids/core/overlay";
 import { TextField } from "@/components/tailgrids/core/text-field";
+import { ApiError } from "@/lib/api-client";
+import { changePassword } from "@/lib/users";
 import { cn } from "@/utils/cn";
 import { Eye, EyeDisabled } from "@tailgrids/icons";
 import { useState } from "react";
 import { FieldError, Form } from "react-aria-components";
+import { toast } from "sonner";
 import { securityItems } from "./data";
+
+// TODO: replace once auth is wired up
+const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 export default function SecurityTabContent() {
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+
+    const currentPassword = String(data.get("current-password") ?? "");
+    const newPassword = String(data.get("new-password") ?? "");
+    const confirmPassword = String(data.get("confirm-password") ?? "");
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation don't match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await changePassword(CURRENT_USER_ID, { currentPassword, newPassword });
+      toast.success("Password updated");
+      setOpenPasswordDialog(false);
+      e.currentTarget.reset();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Couldn't update your password.";
+      toast.error("Password change failed", { description: message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div>
@@ -44,7 +78,6 @@ export default function SecurityTabContent() {
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-background-gray-secondary_alt text-icon-secondary">
                 <Icon />
               </div>
-
               <div className="min-w-0">
                 <p className="text-sm leading-5 font-medium text-text-primary">{title}</p>
                 <p className="mt-1 text-xs leading-4 text-text-tertiary">{description}</p>
@@ -65,14 +98,9 @@ export default function SecurityTabContent() {
       </div>
 
       <OverlayWrapper isOpen={openPasswordDialog} onOpenChange={setOpenPasswordDialog}>
-        <Backdrop isDismissable>
+        <Backdrop isDismissable={!isSubmitting}>
           <Dialog className="max-w-108.75 p-0">
-            <Form
-              onSubmit={(event) => {
-                event.preventDefault();
-                setOpenPasswordDialog(false);
-              }}
-            >
+            <Form onSubmit={handleSubmit}>
               <DialogHeader className="gap-1 border-b border-card-border py-4 pr-14 pl-5">
                 <DialogTitle className="text-xl leading-7">Update Password</DialogTitle>
                 <DialogDescription className="text-text-tertiary">
@@ -86,6 +114,7 @@ export default function SecurityTabContent() {
                   <InputGroup>
                     <InputGroupInput
                       id="current-password"
+                      name="current-password"
                       type={showCurrentPassword ? "text" : "password"}
                       placeholder="Enter your current password"
                       autoComplete="current-password"
@@ -97,11 +126,7 @@ export default function SecurityTabContent() {
                       onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                       aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                     >
-                      {showCurrentPassword ? (
-                        <EyeDisabled className="size-5" />
-                      ) : (
-                        <Eye className="size-5" />
-                      )}
+                      {showCurrentPassword ? <EyeDisabled className="size-5" /> : <Eye className="size-5" />}
                     </InputGroupButton>
                   </InputGroup>
                 </TextField>
@@ -111,6 +136,7 @@ export default function SecurityTabContent() {
                   <InputGroup>
                     <InputGroupInput
                       id="new-password"
+                      name="new-password"
                       type={showNewPassword ? "text" : "password"}
                       placeholder="Choose a new password"
                       minLength={8}
@@ -123,11 +149,7 @@ export default function SecurityTabContent() {
                       onPress={() => setShowNewPassword(!showNewPassword)}
                       aria-label={showNewPassword ? "Hide password" : "Show password"}
                     >
-                      {showNewPassword ? (
-                        <EyeDisabled className="size-5" />
-                      ) : (
-                        <Eye className="size-5" />
-                      )}
+                      {showNewPassword ? <EyeDisabled className="size-5" /> : <Eye className="size-5" />}
                     </InputGroupButton>
                   </InputGroup>
                   <FieldError />
@@ -138,6 +160,7 @@ export default function SecurityTabContent() {
                   <InputGroup>
                     <InputGroupInput
                       id="confirm-password"
+                      name="confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Re-enter your new password"
                       minLength={8}
@@ -150,11 +173,7 @@ export default function SecurityTabContent() {
                       onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                       aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     >
-                      {showConfirmPassword ? (
-                        <EyeDisabled className="size-5" />
-                      ) : (
-                        <Eye className="size-5" />
-                      )}
+                      {showConfirmPassword ? <EyeDisabled className="size-5" /> : <Eye className="size-5" />}
                     </InputGroupButton>
                   </InputGroup>
                   <FieldError />
@@ -163,18 +182,13 @@ export default function SecurityTabContent() {
 
               <DialogFooter className="border-t border-card-border px-5 py-4">
                 <DialogClose
-                  className={cn(
-                    buttonStyles({
-                      appearance: "outline",
-                      size: "lg",
-                      className: "px-3.5 text-sm",
-                    }),
-                  )}
+                  isDisabled={isSubmitting}
+                  className={cn(buttonStyles({ appearance: "outline", size: "lg", className: "px-3.5 text-sm" }))}
                 >
                   Cancel
                 </DialogClose>
-                <Button type="submit" size="lg" className="px-3.5 text-sm">
-                  Apply Changes
+                <Button type="submit" size="lg" className="px-3.5 text-sm" isDisabled={isSubmitting}>
+                  {isSubmitting ? "Updating…" : "Apply Changes"}
                 </Button>
               </DialogFooter>
             </Form>
