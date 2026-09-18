@@ -14,8 +14,8 @@ import { AuthProvider } from "@/context/auth-context";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | NextAdmin - Next.js Dashboard Kit",
-    default: "NextAdmin - Next.js Dashboard Kit",
+    template: "%s | MinDA Registration and Attendance System",
+    default: "MinDA Registration and Attendance System",
   },
   description:
     "Next.js admin dashboard toolkit with 200+ templates, UI components, and integrations for fast dashboard development.",
@@ -34,9 +34,11 @@ export default function RootLayout({
       className={cn("h-full overflow-hidden antialiased")}
     >
       <body className="h-full overflow-hidden bg-background-gray-secondary_alt_2">
-        <ThemeProvider defaultTheme="light" enableSystem>
-            <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+        <Providers>
+          <ThemeProvider defaultTheme="light" enableSystem>
+              <AuthProvider>{children}</AuthProvider>
+          </ThemeProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>

@@ -53,9 +53,9 @@ export default function Sidebar({
                     {isSidebarOpen ? (
                         <>
                             {theme === 'light' ? (
-                                <LogoWithText />
+                                <span className="text-xl font-bold">MinDARAS</span>
                             ) : (
-                                <LogoWithTextDark />
+                                <span className="text-xl font-bold">MinDARAS</span>
                             )}
                         </>
                     ) : (

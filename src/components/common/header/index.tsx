@@ -33,7 +33,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
 
           {/* Center: Logo */}
           <div className="flex items-center justify-center">
-            <LogoWithText />
+            <span className="text-xl font-bold">MinDARAS</span>
           </div>
 
           {/* Right: Three-dot */}

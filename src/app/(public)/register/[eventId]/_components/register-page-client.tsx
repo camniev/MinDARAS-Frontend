@@ -175,7 +175,15 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
           </div>
         ))}
 
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center float-right px-1 pb-10">
+          <button
+            type="button"
+            onClick={() => setValues({})}
+            className="text-sm font-medium mr-4"
+            style={{ color: accentColor }}
+          >
+            Clear form
+          </button>
           <button
             type="submit"
             disabled={isSubmitting}
@@ -183,14 +191,6 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
             style={{ backgroundColor: accentColor }}
           >
             {isSubmitting ? "Submitting…" : "Submit"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setValues({})}
-            className="text-sm font-medium"
-            style={{ color: accentColor }}
-          >
-            Clear form
           </button>
         </div>
       </form>
