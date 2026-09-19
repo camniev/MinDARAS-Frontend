@@ -1,5 +1,5 @@
 // src/lib/auth.ts
-import { apiPost } from "@/lib/api-client";
+import { apiPost, apiPut } from "@/lib/api-client";
 
 export type LoginPayload = {
   userName: string;
@@ -28,8 +28,8 @@ export function updatePasswordOnFirstLogin(
   userId: string,
   payload: { currentPassword: string; newPassword: string },
 ) {
-  return apiPost<{ message: string }, typeof payload>(
-    `/api/User/${userId}/UpdatePasswordOnFirstLogin`,
+  return apiPut<{ message: string }, typeof payload>(
+    `/api/Auth/${userId}/UpdatePasswordOnFirstLogin`,
     payload,
     { credentials: "include" },
   );
