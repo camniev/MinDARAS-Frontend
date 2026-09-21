@@ -37,7 +37,9 @@ import {
   Search1,
   UserMultiple1,
   PenToSquare,
+  RefreshCircle1Clockwise,
 } from "@tailgrids/icons";
+import { refresh } from "next/cache";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -55,39 +57,42 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
   const [form, setForm] = useState<FormDefinitionDetail | null>(null);
   const [registrations, setRegistrations] = useState<RegistrationListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+  async function load() {
+    setIsLoading(true);
+    setLoadError(null);
 
-    async function load() {
-      setIsLoading(true);
-      setLoadError(null);
-      try {
-        const [eventData, formData, regData] = await Promise.all([
-          fetchEventById(eventId),
-          fetchFormForEvent(eventId),
-          fetchRegistrationsForEvent(eventId),
-        ]);
-        if (cancelled) return;
-        setEvent(eventData);
-        setForm(formData);
-        setRegistrations(regData);
-      } catch (err) {
-        if (cancelled) return;
-        const message = err instanceof ApiError ? err.message : "Couldn't load this event.";
-        setLoadError(message);
-        toast.error("Couldn't load event", { description: message });
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+    try {
+      const [eventData, formData, regData] = await Promise.all([
+        fetchEventById(eventId),
+        fetchFormForEvent(eventId),
+        fetchRegistrationsForEvent(eventId),
+      ]);
+
+      setEvent(eventData);
+      setForm(formData);
+      setRegistrations(regData);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't load this event.";
+
+      setLoadError(message);
+
+      toast.error("Couldn't load event", {
+        description: message,
+      });
+    } finally {
+      setIsLoading(false);
     }
+  }
 
+  useEffect(() => {
     load();
-    return () => {
-      cancelled = true;
-    };
   }, [eventId]);
 
   // Name + Email always lead; remaining fields follow in OrderIndex order.
@@ -156,6 +161,33 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Export ready", { description: `${filtered.length} rows exported to CSV.` });
+  }
+
+  async function refreshRegistrations() {
+    setIsRefreshing(true);
+
+    try {
+      const regData = await fetchRegistrationsForEvent(eventId);
+
+      setRegistrations(regData);
+
+      toast.success("Table refreshed");
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't refresh registrations.";
+
+      toast.error("Couldn't refresh table", {
+        description: message,
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  function handleRefresh() {
+    refreshRegistrations();
   }
 
   async function handleCopyRegistrationLink() {
@@ -312,15 +344,31 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
             />
           </InputGroup>
 
-          <Button
-            appearance="outline"
-            className="gap-2 px-4 whitespace-nowrap"
-            onClick={handleExport}
-            isDisabled={filtered.length === 0}
-          >
-            <Download1 className="size-4" />
-            Export
-          </Button>
+          <div className="flex flex-row">
+            <Button
+              appearance="outline"
+              className="gap-2 px-4 whitespace-nowrap"
+              onClick={handleExport}
+              isDisabled={filtered.length === 0}
+            >
+              <Download1 className="size-4" />
+              Export
+            </Button>
+            <Button
+              appearance="outline"
+              className="ml-1 gap-2 px-4 whitespace-nowrap"
+              onClick={handleRefresh}
+              isDisabled={isRefreshing}
+            >
+              <RefreshCircle1Clockwise
+                className={cn(
+                  "size-4",
+                  isRefreshing && "animate-spin"
+                )}
+              />
+              {isRefreshing ? "Refreshing..." : "Refresh Table"}
+            </Button>
+          </div>
         </div>
 
         <Card className="overflow-hidden p-0">

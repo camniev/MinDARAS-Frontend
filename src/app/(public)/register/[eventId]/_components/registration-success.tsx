@@ -21,6 +21,11 @@ export default function RegistrationSuccess({ confirmation }: { confirmation: Re
       </div>
 
       <p className="font-mono text-sm text-text-secondary">{confirmation.participantCode}</p>
+      {!confirmation.emailSent && (
+        <p className="text-xs text-amber-600">
+          We couldn't email your ticket — please screenshot or save this QR code now.
+        </p>
+      )}
       <p className="text-xs text-text-tertiary">
         Save this QR code — present it at the venue entrance for check-in.
       </p>

@@ -130,6 +130,7 @@ export type RegistrationConfirmation = {
   participantCode: string;
   qrCode: string;
   eventName: string;
+  emailSent: boolean; // added to show whether the email actually landed
 };
 
 // ASP.NET Core's ValidationProblemDetails shape
