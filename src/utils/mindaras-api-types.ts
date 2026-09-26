@@ -24,6 +24,7 @@ export type ApiEvent = {
   eventCapacity: number | null;
   registrationCount: number;
   checkedInCount: number;
+  status: EventStatusValue;
 };
 
 export type SaveEventResponse = {
@@ -211,3 +212,6 @@ export type DecodedAccessToken = {
   iss: string;
   aud: string;
 };
+
+// event status shape
+export type EventStatusValue = "Upcoming" | "Ongoing" | "Completed" | "Cancelled";

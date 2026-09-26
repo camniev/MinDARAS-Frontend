@@ -2,7 +2,7 @@
 
 import { FormTheme } from "./mindaras-api-types";
 
-export type EventStatus = "Upcoming" | "Ongoing" | "Completed";
+export type EventStatus = "Upcoming" | "Ongoing" | "Completed" | "Cancelled"; // ← add "Cancelled"
 
 export type EventItem = {
   id: string;
@@ -16,6 +16,8 @@ export type EventItem = {
   capacity?: number;
   registered?: number;
   checkedIn?: number;
+  startDateIso: string;
+  endDateIso: string;
 };
 
 export type FormFieldType = {

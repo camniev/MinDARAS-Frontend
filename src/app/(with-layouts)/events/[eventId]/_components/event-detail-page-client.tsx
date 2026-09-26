@@ -4,11 +4,13 @@ import { Badge } from "@/components/tailgrids/core/badge";
 import { Breadcrumbs } from "@/components/tailgrids/core/breadcrumbs";
 import { Button } from "@/components/tailgrids/core/button";
 import { Card, CardContent, CardHeader } from "@/components/tailgrids/core/card";
+import { Dialog } from "@/components/tailgrids/core/dialog";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/tailgrids/core/input-group";
+import { Backdrop, OverlayWrapper } from "@/components/tailgrids/core/overlay";
 import {
   TableBody,
   TableCell,
@@ -18,9 +20,8 @@ import {
   TableRow,
 } from "@/components/tailgrids/core/table";
 import { ApiError } from "@/lib/api-client";
-import { fetchEventById, fetchFormForEvent, fetchRegistrationsForEvent } from "@/lib/events";
+import { fetchEventById, fetchFormForEvent, fetchRegistrationsForEvent, updateEventStatus } from "@/lib/events";
 import { cn } from "@/utils/cn";
-import { deriveStatus } from "@/utils/map-api-event";
 import {
   EventDetail,
   FormDefinitionDetail,
@@ -38,6 +39,8 @@ import {
   UserMultiple1,
   PenToSquare,
   RefreshCircle1Clockwise,
+  BoxArchive1,
+  Close,
 } from "@tailgrids/icons";
 import { refresh } from "next/cache";
 import Link from "next/link";
@@ -60,6 +63,11 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   async function load() {
     setIsLoading(true);
@@ -90,6 +98,37 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
       setIsLoading(false);
     }
   }
+
+  async function handleArchive() {
+    setIsArchiving(true);
+    try {
+      await updateEventStatus(event!.eventId, "Completed");
+      setEvent((prev) => (prev ? { ...prev, status: "Completed" } : prev));
+      toast.success("Event archived as Completed");
+      setShowArchiveConfirm(false);
+    } catch {
+      toast.error("Couldn't archive this event");
+    } finally {
+      setIsArchiving(false);
+    }
+  }
+
+  async function handleCancel() {
+    setIsCancelling(true);
+    try {
+      await updateEventStatus(event!.eventId, "Cancelled");
+      setEvent((prev) => (prev ? { ...prev, status: "Cancelled" } : prev));
+      toast.success("Event has been cancelled successfully");
+      setShowCancelConfirm(false);
+    } catch {
+      toast.error("Couldn't cancel this event");
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
+  const canArchive = event && event.status === "Completed";
+  const canCancel = event && event.status !== "Completed" && event.status !== "Cancelled";
 
   useEffect(() => {
     load();
@@ -225,9 +264,7 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
   }
 
   const hasForm = Boolean(form);
-
-  const eventStatus = deriveStatus(event.eventStartDate, event.eventEndDate);
-  const isRegistrationOpen = hasForm && form!.isActive && eventStatus === "Upcoming";
+  const isRegistrationOpen = hasForm && form!.isActive && event.status === "Upcoming";
 
   return (
     <div className="mt-6 space-y-5">
@@ -307,6 +344,18 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
                   {hasForm ? "Edit Registration Form" : "Create a Form"}
                 </Link>
               </Button>
+              {canArchive && (
+                <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={() => setShowArchiveConfirm(true)}>
+                  <BoxArchive1 className="size-4" />
+                  Archive Event
+                </Button>
+              )}
+              {canCancel && (
+                <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={() => setShowCancelConfirm(true)}>
+                  <Close className="size-4" />
+                  Cancel Event
+                </Button>
+              )}
             </div>
           </div>
         </Card>
@@ -446,6 +495,52 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
           </CardContent>
         </Card>
       </div>
+      <OverlayWrapper isOpen={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
+        <Backdrop isDismissable={!isArchiving}>
+          <Dialog className="max-w-100 p-6">
+            <h2 className="text-lg font-semibold text-text-primary">Archive this event?</h2>
+            <p className="mt-2 text-sm text-text-tertiary">
+              This marks the event as Completed. Registration and check-in will no longer be available.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowArchiveConfirm(false)}
+                disabled={isArchiving}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background-gray-secondary_alt"
+              >
+                Cancel
+              </button>
+              <Button onClick={handleArchive} isDisabled={isArchiving} size="sm" className="px-4">
+                {isArchiving ? "Archiving…" : "Archive"}
+              </Button>
+            </div>
+          </Dialog>
+        </Backdrop>
+      </OverlayWrapper>
+      <OverlayWrapper isOpen={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <Backdrop isDismissable={!isCancelling}>
+          <Dialog className="max-w-100 p-6">
+            <h2 className="text-lg font-semibold text-text-primary">Archive this event?</h2>
+            <p className="mt-2 text-sm text-text-tertiary">
+              This marks the event as Cancelled. Registration and check-in will no longer be available.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={isArchiving}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background-gray-secondary_alt"
+              >
+                Cancel
+              </button>
+              <Button onClick={handleCancel} isDisabled={isCancelling} size="sm" className="px-4">
+                {isArchiving ? "Cancelling…" : "Cancel Event"}
+              </Button>
+            </div>
+          </Dialog>
+        </Backdrop>
+      </OverlayWrapper>
     </div>
   );
 }

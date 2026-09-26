@@ -8,7 +8,6 @@ import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
 import { useEffect, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
-import { deriveStatus } from "@/utils/map-api-event";
 
 function Shell({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
   return (
@@ -114,7 +113,7 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
     );
   }
 
-  const eventStatus = event ? deriveStatus(event.eventStartDate, event.eventEndDate) : null;
+  const eventStatus = event ? event.status : null;
   const isRegistrationOpen = form?.isActive && eventStatus === "Upcoming";
 
   // ...after the existing isLoading / confirmation / loadError checks, before the main return:

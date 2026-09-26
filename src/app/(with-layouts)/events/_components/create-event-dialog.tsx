@@ -114,24 +114,26 @@ export default function CreateEventDialog({ onCreate }: Props) {
       // optimistically reflect the new event in the grid before navigating
       const categoryName = categories.find((c) => c.eventCategoryId === eventCategoryId)?.eventCategoryName ?? "Uncategorized";
       onCreate({
-      id: result.eventId,
-      category: categoryName,
-      title,
-      description,
-      date: startDate
-        ? new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, {
+        id: result.eventId,
+        category: categoryName,
+        title,
+        description,
+        date: startDate
+          ? new Date(`${startDate}T00:00:00`).toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
             year: "numeric",
           })
-        : "TBD",
-      time: startTime || "TBD",
-      location: location || "TBD",
-      status: deriveStatus(startDateTime, endDateTime), // ← was: "Draft"
-      capacity: capacityRaw,
-      registered: 0,
-      checkedIn: 0,
-    });
+          : "TBD",
+        time: startTime || "TBD",
+        location: location || "TBD",
+        status: "Upcoming",
+        capacity: capacityRaw,
+        registered: 0,
+        checkedIn: 0,
+        startDateIso: startDateTime,
+        endDateIso: endDateTime
+      });
 
       setIsOpen(false);
       e.currentTarget.reset();

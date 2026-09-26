@@ -1,6 +1,6 @@
 // src/lib/events.ts
 import { apiGet, apiPut, apiUploadFile } from "@/lib/api-client";
-import { ApiEvent, EventDetail, RegistrationListItem, FormDefinitionDetail } from "@/utils/mindaras-api-types";
+import { ApiEvent, EventDetail, RegistrationListItem, FormDefinitionDetail, EventStatusValue } from "@/utils/mindaras-api-types";
 import { ApiError } from "@/lib/api-client";
 
 export function fetchActiveEvents() {
@@ -55,5 +55,13 @@ export async function toggleFormStatus(eventId: string, isActive: boolean) {
   return apiPut<{ message: string; isActive: boolean }, { isActive: boolean }>(
     `/api/FormDefinition/${eventId}/Form/Status`,
     { isActive },
+  );
+}
+
+// api call for updating event status
+export function updateEventStatus(eventId: string, status: EventStatusValue) {
+  return apiPut<{ message: string; status: string }, { status: EventStatusValue }>(
+    `/api/Event/${eventId}/Status`,
+    { status },
   );
 }

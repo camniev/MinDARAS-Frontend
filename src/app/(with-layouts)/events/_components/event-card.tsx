@@ -8,10 +8,11 @@ import { EventItem } from "@/utils/mindaras-data";
 import { Calendar, MapMarker5, UserMultiple1 } from "@tailgrids/icons";
 import Link from "next/link";
 
-const STATUS_COLOR: Record<EventItem["status"], "success" | "gray" | "warning" | "blue"> = {
+const STATUS_COLOR: Record<EventItem["status"], "success" | "gray" | "warning" | "blue" | "error"> = {
   Upcoming: "blue",
   Ongoing: "success",
   Completed: "gray",
+  Cancelled: "error",
 };
 
 export default function EventCard({ event }: { event: EventItem }) {
