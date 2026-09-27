@@ -1,11 +1,12 @@
 "use client";
 
 import { ApiError } from "@/lib/api-client";
-import { fetchEventById, fetchFormForEvent, registerForEvent } from "@/lib/events";
+import { fetchFormForEvent, registerForEvent } from "@/lib/events";
 import { resolveAssetUrl } from "@/lib/resolve-asset-url";
-import { EventDetail, FormDefinitionDetail, RegistrationConfirmation } from "@/utils/mindaras-api-types";
+import { computeNextSectionId } from "@/utils/compute-section-path";
+import { FormDefinitionDetail, RegistrationConfirmation } from "@/utils/mindaras-api-types";
 import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
 
@@ -27,49 +28,88 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<RegistrationConfirmation | null>(null);
 
-  const [event, setEvent] = useState<EventDetail | null>(null);
+  const sortedSections = useMemo(
+    () => (form ? [...form.sections].sort((a, b) => a.orderIndex - b.orderIndex) : []),
+    [form],
+  );
+  const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
+  const [visitedPath, setVisitedPath] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (sortedSections.length > 0 && !currentSectionId) {
+      setCurrentSectionId(sortedSections[0].sectionId);
+      setVisitedPath([sortedSections[0].sectionId]);
+    }
+  }, [sortedSections, currentSectionId]);
 
   const theme = form?.theme ?? DEFAULT_FORM_THEME;
   const backgroundImageUrl = resolveAssetUrl(theme.backgroundImageUrl);
   const headerImageUrl = resolveAssetUrl(theme.headerImageUrl);
   const accentColor = theme.primaryColor ?? "#3C50E0";
-
   const pageBackgroundStyle: React.CSSProperties =
     theme.backgroundType === "image" && backgroundImageUrl
-      ? {
-          backgroundImage: `url(${backgroundImageUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed",
-        }
+      ? { backgroundImage: `url(${backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }
       : { backgroundColor: theme.backgroundColor ?? "#F4F5F7" };
 
   useEffect(() => {
-    Promise.all([fetchFormForEvent(eventId), fetchEventById(eventId)])
-      .then(([formData, eventData]) => {
-        if (!formData) {
+    fetchFormForEvent(eventId)
+      .then((data) => {
+        if (!data) {
           setLoadError("Registration isn't open for this event yet.");
           return;
         }
-        setForm(formData);
-        setEvent(eventData);
+        setForm(data);
       })
       .catch(() => setLoadError("Couldn't load the registration form."))
       .finally(() => setIsLoading(false));
   }, [eventId]);
 
+  const currentSection = sortedSections.find((s) => s.sectionId === currentSectionId) ?? null;
+  const currentFields = form?.formFields.filter((f) => f.sectionId === currentSectionId) ?? [];
+  const isTerminal = currentSection ? !currentSection.defaultNextSectionId && !currentFields.some((f) => f.branchingConfig) : false;
+
+  function validateCurrentSection(): boolean {
+    const errors: Record<string, string[]> = {};
+    for (const field of currentFields) {
+      const value = values[field.fieldId];
+      if (field.isRequired && !value?.trim()) {
+        errors[field.fieldId] = [`${field.fieldLabel} is required.`];
+      }
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function handleNext() {
+    if (!validateCurrentSection() || !form || !currentSection) return;
+    const nextId = computeNextSectionId(currentSection, form.formFields, values);
+    if (!nextId) return; // shouldn't happen if isTerminal gated the button correctly
+    setCurrentSectionId(nextId);
+    setVisitedPath((prev) => [...prev, nextId]);
+  }
+
+  function handleBack() {
+    setVisitedPath((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.slice(0, -1);
+      setCurrentSectionId(next[next.length - 1]);
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form) return;
+    if (!validateCurrentSection()) return;
 
-    setFieldErrors({});
+    const visitedFieldIds = new Set(
+      form.formFields.filter((f) => visitedPath.includes(f.sectionId)).map((f) => f.fieldId),
+    );
+
     setIsSubmitting(true);
     try {
       const result = await registerForEvent(eventId, {
-        responses: form.formFields.map((f) => ({
-          fieldId: f.fieldId,
-          value: values[f.fieldId] ?? "",
-        })),
+        responses: [...visitedFieldIds].map((fieldId) => ({ fieldId, value: values[fieldId] ?? "" })),
       });
       setConfirmation(result);
     } catch (err) {
@@ -87,82 +127,50 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <Shell style={pageBackgroundStyle}>
-        <div className="h-64 w-full animate-pulse rounded-lg bg-white/70" />
-      </Shell>
-    );
-  }
-
-  if (confirmation) {
-    return (
-      <Shell style={pageBackgroundStyle}>
-        <RegistrationSuccess confirmation={confirmation} />
-      </Shell>
-    );
-  }
-
-  if (loadError || !form) {
-    return (
-      <Shell style={pageBackgroundStyle}>
-        <div className="space-y-2 rounded-lg bg-white py-12 text-center shadow-sm">
-          <p className="text-sm text-gray-500">{loadError ?? "This form isn't available."}</p>
-        </div>
-      </Shell>
-    );
-  }
-
-  const eventStatus = event ? event.status : null;
-  const isRegistrationOpen = form?.isActive && eventStatus === "Upcoming";
-
-  // ...after the existing isLoading / confirmation / loadError checks, before the main return:
-  if (!isRegistrationOpen) {
-    return (
-      <Shell style={pageBackgroundStyle}>
-        <div className="space-y-2 rounded-lg bg-white py-12 text-center shadow-sm">
-          <p className="text-sm text-gray-500">
-            {eventStatus === "Completed"
-              ? "This event has already taken place."
-              : eventStatus === "Ongoing"
-                ? "This event is currently underway — registration is closed."
-                : "Registration for this event is currently closed."}
-          </p>
-        </div>
-      </Shell>
-    );
+  if (isLoading) return <Shell style={pageBackgroundStyle}><div className="h-64 w-full animate-pulse rounded-lg bg-white/70" /></Shell>;
+  if (confirmation) return <Shell style={pageBackgroundStyle}><RegistrationSuccess confirmation={confirmation} /></Shell>;
+  if (loadError || !form || !currentSection) {
+    return <Shell style={pageBackgroundStyle}><div className="space-y-2 rounded-lg bg-white py-12 text-center shadow-sm"><p className="text-sm text-gray-500">{loadError ?? "This form isn't available."}</p></div></Shell>;
   }
 
   return (
     <Shell style={pageBackgroundStyle}>
       {headerImageUrl && (
-        <img
-          src={headerImageUrl}
-          alt=""
-          className="mb-3 aspect-[4/1] w-full rounded-lg object-cover"
-        />
+        <img src={headerImageUrl} alt="" className="mb-3 aspect-[4/1] w-full rounded-lg object-cover" />
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Note: no <form>/onSubmit here — every action below is an explicit
+          onClick, so nothing can be triggered by Enter or implicit browser
+          form-submission semantics. This is deliberate: it's what guarantees
+          the Submit button only ever fires from a real, deliberate click. */}
+      <div className="space-y-4">
         <div className="overflow-hidden rounded-lg bg-white shadow-sm">
           <div className="h-2.5 w-full" style={{ backgroundColor: accentColor }} />
           <div className="space-y-3 p-6">
-            <h1
-              className="text-[28px] leading-9 font-normal"
-              style={{ color: theme.headerTextColor ?? "#1C2434" }}
-            >
-              {theme.headerText || form.formName}
-            </h1>
-            {form.formDescription && (
-              <p className="border-t border-gray-100 pt-3 text-sm leading-6 text-gray-600">
-                {form.formDescription}
+            {/* Persistent form identity — stays visible on every step */}
+            <div>
+              <h1 className="text-2xl leading-8 font-normal" style={{ color: theme.headerTextColor ?? "#1C2434" }}>
+                {theme.headerText || form.formName}
+              </h1>
+              {form.formDescription && (
+                <p className="mt-1 text-sm leading-6 text-gray-600">{form.formDescription}</p>
+              )}
+            </div>
+
+            {/* Current step — changes as the participant advances */}
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs font-medium text-text-tertiary">
+                Step {visitedPath.length} of {sortedSections.length}
               </p>
-            )}
-            <p className="text-xs text-red-600">* Required</p>
+              <h2 className="text-lg leading-6 font-medium text-text-primary">{currentSection.title}</h2>
+              {currentSection.description && (
+                <p className="mt-1 text-sm leading-6 text-gray-600">{currentSection.description}</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {form.formFields.map((field) => (
+        {currentFields.map((field) => (
           <div key={field.fieldId} className="rounded-lg bg-white p-4 shadow-sm sm:p-6">
             <DynamicFieldInput
               field={field}
@@ -174,25 +182,35 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
           </div>
         ))}
 
-        <div className="flex items-center float-right px-1 pb-10">
-          <button
-            type="button"
-            onClick={() => setValues({})}
-            className="text-sm font-medium mr-4"
-            style={{ color: accentColor }}
-          >
-            Clear form
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-md px-6 py-2 text-sm font-medium text-white shadow-sm transition disabled:opacity-60"
-            style={{ backgroundColor: accentColor }}
-          >
-            {isSubmitting ? "Submitting…" : "Submit"}
-          </button>
+        <div className="flex items-center justify-between px-1">
+          {visitedPath.length > 1 ? (
+            <button type="button" onClick={handleBack} className="text-sm font-medium" style={{ color: accentColor }}>
+              Back
+            </button>
+          ) : <span />}
+
+          {isTerminal ? (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="rounded-md px-6 py-2 text-sm font-medium text-white shadow-sm disabled:opacity-60"
+              style={{ backgroundColor: accentColor }}
+            >
+              {isSubmitting ? "Submitting…" : "Submit"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="rounded-md px-6 py-2 text-sm font-medium text-white shadow-sm"
+              style={{ backgroundColor: accentColor }}
+            >
+              Next
+            </button>
+          )}
         </div>
-      </form>
+      </div>
     </Shell>
   );
 }

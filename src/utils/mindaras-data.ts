@@ -23,7 +23,7 @@ export type EventItem = {
 export type FormFieldType = {
   id: string;
   label: string;
-  inputType: "text" | "email" | "select" | "number" | "date" | "textarea" | "checkbox";
+  inputType: "text" | "email" | "select" | "number" | "date" | "textarea" | "checkbox" | "datetime";
 };
 
 export const AVAILABLE_FIELD_TYPES: FormFieldType[] = [
@@ -32,6 +32,7 @@ export const AVAILABLE_FIELD_TYPES: FormFieldType[] = [
   { id: "select", label: "Dropdown Select", inputType: "select" },
   { id: "number", label: "Number", inputType: "number" },
   { id: "date", label: "Date", inputType: "date" },
+  { id: "datetime", label: "Date & Time", inputType: "datetime" },
   { id: "textarea", label: "Long Answer", inputType: "textarea" },
   { id: "checkbox", label: "Checkbox", inputType: "checkbox" },
 ];
@@ -45,6 +46,8 @@ export type BuilderField = {
   required: boolean;
   options: string[];    // only meaningful when inputType === "select"
   locked?: boolean;     // true for the default Name/Email/Ticket Type fields
+  sectionId: string;         // ← new
+  branchingConfig?: Record<string, string>; // option value -> target sectionId
 };
 
 export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
@@ -57,6 +60,7 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     required: true,
     options: [],
     locked: true,
+    sectionId: ""
   },
   {
     key: "field-email",
@@ -67,8 +71,28 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     required: true,
     options: [],
     locked: true,
+    sectionId: ""
   },
 ];
+
+export type BuilderSection = {
+  sectionId: string;
+  title: string;
+  description: string;
+  orderIndex: number;
+  defaultNextSectionId: string | null;
+};
+
+export function createDefaultSections(): BuilderSection[] {
+  const firstSectionId = crypto.randomUUID();
+  const personalInfoId = crypto.randomUUID();
+  const submitId = crypto.randomUUID();
+  return [
+    { sectionId: firstSectionId, title: "Data Privacy Consent", description: "", orderIndex: 0, defaultNextSectionId: personalInfoId },
+    { sectionId: personalInfoId, title: "Personal Information", description: "", orderIndex: 1, defaultNextSectionId: submitId },
+    { sectionId: submitId, title: "Submit", description: "", orderIndex: 2, defaultNextSectionId: null },
+  ];
+}
 
 export const DEFAULT_FORM_THEME: FormTheme = {
   backgroundType: "color",

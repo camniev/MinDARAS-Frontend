@@ -47,6 +47,7 @@ export type FormDefinitionDetail = {
   formDescription: string | null;
   formFields: FormFieldDetail[];
   theme: FormTheme | null;
+  sections: FormSection[];
 };
 
 // new types and payload for form definition and form fields
@@ -59,6 +60,8 @@ export type FormFieldDetail = {
   options: string | null;
   orderIndex: number;
   isLocked: boolean;
+  sectionId: string;
+  branchingConfig?: string;
 };
 
 // type for FormThem
@@ -72,6 +75,14 @@ export type FormTheme = {
   headerTextColor: string | null;
 };
 
+export type FormSection = {
+  sectionId: string;
+  title: string;
+  description: string | null;
+  orderIndex: number;
+  defaultNextSectionId: string | null;
+};
+
 export type FormFieldPayload = {
   fieldName: string;
   fieldLabel: string;
@@ -79,6 +90,8 @@ export type FormFieldPayload = {
   isRequired: boolean;
   options: string;
   isLocked: boolean;
+  sectionId: string;
+  branchingConfig?: string;
 };
 
 export type SaveEventFormPayload = {
@@ -87,6 +100,8 @@ export type SaveEventFormPayload = {
   formName: string;
   formDescription?: string;
   formFields: FormFieldPayload[];
+  theme?: FormTheme,
+  sections: FormSection[]; // ← new
 };
 
 export type SaveEventFormResponse = {
@@ -129,7 +144,7 @@ export type RegisterParticipantPayload = {
 export type RegistrationConfirmation = {
   registrationId: string;
   participantCode: string;
-  qrCode: string;
+  qrCode: string | null;
   eventName: string;
   emailSent: boolean; // added to show whether the email actually landed
 };

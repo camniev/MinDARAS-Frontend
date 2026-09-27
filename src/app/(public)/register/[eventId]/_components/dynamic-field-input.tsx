@@ -91,6 +91,21 @@ export default function DynamicFieldInput({ field, value, onChange, error, accen
     );
   }
 
+  if (field.fieldType === "datetime") {
+    return (
+      <div style={accentStyle}>
+        {labelBlock}
+        <input
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm text-[#1C2434] focus:border-b-2 focus:border-[var(--accent-color)] focus:outline-none"
+        />
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
+    );
+  }
+
   // text / email / number / date
   return (
     <div style={accentStyle}>

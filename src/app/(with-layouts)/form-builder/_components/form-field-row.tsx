@@ -1,11 +1,12 @@
 "use client";
 
-import { BuilderField } from "@/utils/mindaras-data";
+import { BuilderField, BuilderSection } from "@/utils/mindaras-data";
 import { slugify } from "@/utils/slugify";
 import { Copy1, Plus, Trash1 } from "@tailgrids/icons";
 
 type Props = {
   field: BuilderField;
+  sections: BuilderSection[];
   existingFieldNames: string[];
   onChange: (updated: BuilderField) => void;
   onRemove: () => void;
@@ -18,11 +19,22 @@ const TYPE_LABELS: Record<BuilderField["inputType"], string> = {
   select: "Dropdown",
   number: "Number",
   date: "Date",
+  datetime: "Date & Time",
   textarea: "Paragraph",
   checkbox: "Checkboxes",
 };
 
-export default function FormFieldRow({ field, existingFieldNames, onChange, onRemove, onDuplicate }: Props) {
+const HAS_CHOICES = (inputType: BuilderField["inputType"]) =>
+  inputType === "select" || inputType === "checkbox";
+
+export default function FormFieldRow({
+  field,
+  sections,
+  existingFieldNames,
+  onChange,
+  onRemove,
+  onDuplicate,
+}: Props) {
   function handleLabelChange(newLabel: string) {
     onChange({
       ...field,
@@ -32,9 +44,20 @@ export default function FormFieldRow({ field, existingFieldNames, onChange, onRe
   }
 
   function updateOption(index: number, value: string) {
+    const oldValue = field.options[index];
     const next = [...field.options];
     next[index] = value;
-    onChange({ ...field, options: next });
+
+    // if this option had a branching rule attached, move the rule to follow
+    // the renamed option rather than silently orphaning it under the old text
+    const branchingConfig = field.branchingConfig ? { ...field.branchingConfig } : undefined;
+    if (branchingConfig && oldValue in branchingConfig) {
+      const target = branchingConfig[oldValue];
+      delete branchingConfig[oldValue];
+      branchingConfig[value] = target;
+    }
+
+    onChange({ ...field, options: next, branchingConfig });
   }
 
   function addOption() {
@@ -42,11 +65,31 @@ export default function FormFieldRow({ field, existingFieldNames, onChange, onRe
   }
 
   function removeOption(index: number) {
-    onChange({ ...field, options: field.options.filter((_, i) => i !== index) });
+    const removed = field.options[index];
+    const branchingConfig = field.branchingConfig ? { ...field.branchingConfig } : undefined;
+    if (branchingConfig) delete branchingConfig[removed];
+
+    onChange({
+      ...field,
+      options: field.options.filter((_, i) => i !== index),
+      branchingConfig,
+    });
+  }
+
+  function updateBranch(option: string, targetSectionId: string) {
+    const branchingConfig = { ...(field.branchingConfig ?? {}) };
+    if (targetSectionId) {
+      branchingConfig[option] = targetSectionId;
+    } else {
+      delete branchingConfig[option];
+    }
+    onChange({ ...field, branchingConfig });
   }
 
   return (
     <div className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+      <div className="absolute inset-y-0 left-0 w-1 bg-brand-500" />
+
       <div className="space-y-4 p-5 pl-6 sm:p-6 sm:pl-7">
         <div className="flex items-start justify-between gap-4">
           <input
@@ -63,11 +106,21 @@ export default function FormFieldRow({ field, existingFieldNames, onChange, onRe
 
         <p className="-mt-2 font-mono text-[11px] text-text-tertiary">key: {field.fieldName || "—"}</p>
 
-        {field.inputType === "select" && (
+        {/* Options / choices editor — now covers BOTH select and checkbox */}
+        {HAS_CHOICES(field.inputType) && (
           <div className="space-y-2">
+            <p className="text-xs font-medium text-text-tertiary">
+              {field.inputType === "checkbox" ? "Choices" : "Options"}
+            </p>
             {field.options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="size-4 shrink-0 rounded-full border border-gray-300" />
+                <span
+                  className={
+                    field.inputType === "checkbox"
+                      ? "size-4 shrink-0 rounded border border-gray-300"
+                      : "size-4 shrink-0 rounded-full border border-gray-300"
+                  }
+                />
                 <input
                   value={opt}
                   onChange={(e) => updateOption(i, e.target.value)}
@@ -89,8 +142,35 @@ export default function FormFieldRow({ field, existingFieldNames, onChange, onRe
               className="flex items-center gap-1.5 text-sm text-brand-500 hover:underline"
             >
               <Plus className="size-3.5" />
-              Add option
+              Add {field.inputType === "checkbox" ? "choice" : "option"}
             </button>
+          </div>
+        )}
+
+        {/* Branching editor — only meaningful once there are choices to branch on */}
+        {HAS_CHOICES(field.inputType) && field.options.length > 0 && sections.length > 1 && (
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <p className="text-xs font-medium text-text-tertiary">
+              Branch to a section based on the answer
+            </p>
+            {field.options.map((opt) => (
+              <div key={opt} className="flex items-center gap-2 text-sm">
+                <span className="w-28 shrink-0 truncate text-text-secondary">{opt || "(empty)"}</span>
+                <span className="text-text-tertiary">→</span>
+                <select
+                  value={field.branchingConfig?.[opt] ?? ""}
+                  onChange={(e) => updateBranch(opt, e.target.value)}
+                  className="flex-1 rounded-md border border-gray-200 px-2 py-1 text-sm"
+                >
+                  <option value="">Continue normally</option>
+                  {sections.map((s) => (
+                    <option key={s.sectionId} value={s.sectionId}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
           </div>
         )}
 
