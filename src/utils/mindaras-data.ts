@@ -73,7 +73,71 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     locked: true,
     sectionId: ""
   },
+  {
+    key: "field-position",
+    typeId: "text",
+    fieldName: "position_designation",
+    label: "Position / Designation",
+    inputType: "text",
+    required: true,
+    options: [],
+    locked: true,
+    sectionId: ""
+  },
+  {
+    key: "field-office",
+    typeId: "text",
+    fieldName: "office",
+    label: "Agency / Office / Division",
+    inputType: "text",
+    required: true,
+    options: [],
+    locked: true,
+    sectionId: ""
+  },
+  {
+    key: "field-sc-choice",
+    typeId: "select",
+    fieldName: "sc_choice_select",
+    label: "Senior Citizen?",
+    inputType: "select",
+    required: true,
+    options: ["Yes", "No"],
+    locked: true,
+    sectionId: ""
+  },
+  {
+    key: "field-pwd-choice",
+    typeId: "select",
+    fieldName: "pwd_choice_select",
+    label: "Are you a Person With Disability (PWD)?",
+    inputType: "select",
+    required: true,
+    options: ["Yes", "No"],
+    locked: true,
+    sectionId: ""
+  },
+  {
+    key: "field-contact-number",
+    typeId: "text",
+    fieldName: "contact_number",
+    label: "Contact Number",
+    inputType: "text",
+    required: true,
+    options: [],
+    locked: true,
+    sectionId: ""
+  },
 ];
+
+export const PERSONAL_INFO_FIELD_NAMES = new Set([
+  "full_name",
+  "position_designation",
+  "office",
+  "sc_choice_select",
+  "pwd_choice_select",
+  "contact_number",
+]);
 
 export type BuilderSection = {
   sectionId: string;

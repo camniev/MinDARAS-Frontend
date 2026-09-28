@@ -13,6 +13,7 @@ import {
   createDefaultSections,
   DEFAULT_BUILDER_FIELDS,
   DEFAULT_FORM_THEME,
+  PERSONAL_INFO_FIELD_NAMES,
 } from "@/utils/mindaras-data";
 import { ApiEvent, FormFieldPayload, FormTheme } from "@/utils/mindaras-api-types";
 import { ColourPalette3, Close } from "@tailgrids/icons";
@@ -48,11 +49,13 @@ export default function FormBuilderPageClient() {
   const [sections, setSections] = useState<BuilderSection[]>(initialSectionsRef.current);
   const [fields, setFields] = useState<BuilderField[]>(() => {
   const [firstSection, personalInfoSection] = initialSectionsRef.current!;
-  return DEFAULT_BUILDER_FIELDS.map((f) => ({
-    ...f,
-    sectionId: f.fieldName === "full_name" ? personalInfoSection.sectionId : firstSection.sectionId,
-  }));
-});
+    return DEFAULT_BUILDER_FIELDS.map((f) => ({
+      ...f,
+      sectionId: PERSONAL_INFO_FIELD_NAMES.has(f.fieldName)
+        ? personalInfoSection.sectionId
+        : firstSection.sectionId,
+    }));
+  });
 
   const [isSaving, setIsSaving] = useState(false);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
