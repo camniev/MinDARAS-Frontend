@@ -25,10 +25,19 @@ export default function QrAttendancePageClient() {
       const scanResult = await scanTicket(decodedText.trim(), CURRENT_USER_ID);
       setResult(scanResult);
 
+      const day =
+        scanResult.totalDays && scanResult.totalDays > 1 && scanResult.dayNumber
+          ? ` (Day ${scanResult.dayNumber} of ${scanResult.totalDays})`
+          : "";
+
       if (scanResult.result === "success") {
-        toast.success("Checked in", { description: `${scanResult.attendeeName} — ${scanResult.eventName}` });
+        toast.success("Checked in", {
+          description: `${scanResult.attendeeName} — ${scanResult.eventName}${day}`,
+        });
       } else if (scanResult.result === "already-checked-in") {
-        toast.warning("Already checked in", { description: scanResult.attendeeName ?? undefined });
+        toast.warning("Already checked in today", { description: scanResult.attendeeName ?? undefined });
+      } else if (scanResult.result === "outside-event-dates") {
+        toast.warning("Not an event day", { description: scanResult.eventName ?? undefined });
       } else {
         toast.error("Invalid ticket code");
       }
@@ -41,6 +50,10 @@ export default function QrAttendancePageClient() {
         eventName: null,
         participantCode: null,
         checkInTime: null,
+        dayNumber: null,
+        totalDays: null,
+        eventStartDate: null,
+        eventEndDate: null,
       });
       toast.error("Scan failed", { description: message });
     } finally {

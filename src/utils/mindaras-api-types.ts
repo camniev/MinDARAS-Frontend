@@ -157,13 +157,18 @@ export type ValidationErrorResponse = {
 };
 
 // type for result from scanning QR code
+// mindaras-api-types.ts
 export type ScanResult = {
-  result: "success" | "already-checked-in" | "invalid";
+  result: "success" | "already-checked-in" | "invalid" | "outside-event-dates";
   attendeeName: string | null;
   attendeeEmail: string | null;
   eventName: string | null;
   participantCode: string | null;
   checkInTime: string | null;
+  dayNumber: number | null;
+  totalDays: number | null;
+  eventStartDate: string | null;
+  eventEndDate: string | null;
 };
 
 // types/fields for user and employee details
