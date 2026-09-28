@@ -34,7 +34,7 @@ export default function FormBuilderPageClient() {
   const [isLoadingEvent, setIsLoadingEvent] = useState(true);
   const [isLoadingForm, setIsLoadingForm] = useState(true);
 
-  const [formName, setFormName] = useState("Event Registration");
+  const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
 
   // Compute the default sections ONCE, in a single ref, so `sections` and
@@ -65,16 +65,31 @@ export default function FormBuilderPageClient() {
       return;
     }
 
-    apiGet<ApiEvent[]>("/api/Event/FetchActiveEvents")
-      .then((events) => setEvent(events.find((e) => e.eventId === eventId) ?? null))
-      .catch(() => toast.error("Couldn't load event details"))
-      .finally(() => setIsLoadingEvent(false));
+    let cancelled = false;
 
-    fetchFormForEvent(eventId)
-      .then((existingForm) => {
-        if (!existingForm) return;
+    Promise.all([
+      apiGet<ApiEvent[]>("/api/Event/FetchActiveEvents").catch(() => {
+        toast.error("Couldn't load event details");
+        return null;
+      }),
+      fetchFormForEvent(eventId).catch(() => {
+        toast.error("Couldn't load the existing form");
+        return null;
+      }),
+    ])
+      .then(([events, existingForm]) => {
+        if (cancelled) return;
 
-        setFormName(existingForm.formName);
+        const matchedEvent = events?.find((e) => e.eventId === eventId) ?? null;
+        setEvent(matchedEvent);
+
+        // Runs for new AND existing forms, now that the event name is guaranteed to be known.
+        if (matchedEvent) {
+          setFormName(`[REGISTRATION FORM] ${matchedEvent.eventName}`);
+        }
+
+        if (!existingForm) return; // brand-new form: keep the default sections/fields
+
         setFormDescription(existingForm.formDescription ?? "");
         if (existingForm.theme) setTheme(existingForm.theme);
 
@@ -121,8 +136,15 @@ export default function FormBuilderPageClient() {
           }),
         );
       })
-      .catch(() => toast.error("Couldn't load the existing form"))
-      .finally(() => setIsLoadingForm(false));
+      .finally(() => {
+        if (cancelled) return;
+        setIsLoadingEvent(false);
+        setIsLoadingForm(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId]);
 
   function addSection() {
@@ -291,13 +313,13 @@ export default function FormBuilderPageClient() {
             <Input
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
-              placeholder="Untitled Form"
+              placeholder="Enter Form Name"
               className="w-full border-0 border-b border-transparent bg-transparent p-0 text-2xl font-normal focus:border-b-2 focus:border-brand-500 focus:outline-none"
             />
             <TextArea
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
-              placeholder="Form description"
+              placeholder="Enter Form Description"
               rows={2}
               className="w-full resize-none border-0 border-b border-gray-100 bg-transparent p-0 text-sm text-text-secondary focus:border-brand-500 focus:outline-none"
             />

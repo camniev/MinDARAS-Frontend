@@ -268,6 +268,17 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
 
   return (
     <div className="mt-6 space-y-5">
+      <div className="flex flex-col-reverse items-start justify-end gap-3 px-2 sm:flex-row sm:items-center lg:px-6">
+        <Breadcrumbs
+          dividerType="chevron"
+          items={[
+            { href: "/", label: "Home" },
+            { href: "/events", label: "Events" },
+            { href: `/events/${event.eventId}`, label: event.eventName },
+          ]}
+        />
+      </div>
+
       <div className="flex flex-col-reverse items-start justify-between gap-3 px-2 sm:flex-row sm:items-center lg:px-6">
         <div>
           <div className="mb-1 flex items-center gap-2">
@@ -280,15 +291,37 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
           </div>
           <p className="font-mono text-xs text-text-tertiary">{event.eventRefNo}</p>
         </div>
-
-        <Breadcrumbs
-          dividerType="chevron"
-          items={[
-            { href: "/", label: "Home" },
-            { href: "/events", label: "Events" },
-            { href: `/events/${event.eventId}`, label: event.eventName },
-          ]}
-        />
+        <div className="flex flex-wrap gap-3">
+          {hasForm && (
+            <Badge color={isRegistrationOpen ? "success" : "gray"} size="sm">
+              {isRegistrationOpen ? "Open for Registration" : "Registration Closed"}
+            </Badge>
+          )}
+          {hasForm && (
+            <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={handleCopyRegistrationLink}>
+              <Copy1 className="size-4" />
+              Copy Registration Link
+            </Button>
+          )}
+          <Button asChild size="sm" className="gap-2 px-3.5">
+            {hasForm ? <PenToSquare className="size-4" /> : <Plus className="size-4" />}
+            <Link href={`/form-builder?eventId=${event.eventId}`}>
+              {hasForm ? "Edit Registration Form" : "Create a Form"}
+            </Link>
+          </Button>
+          {canArchive && (
+            <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={() => setShowArchiveConfirm(true)}>
+              <BoxArchive1 className="size-4" />
+              Archive Event
+            </Button>
+          )}
+          {canCancel && (
+            <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={() => setShowCancelConfirm(true)}>
+              <Close className="size-4" />
+              Cancel Event
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-5 px-2 lg:px-6">
@@ -321,40 +354,6 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
                   <UserMultiple1 className="size-4 text-icon-secondary" />
                   Capacity: {event.eventCapacity}
                 </span>
-              )}
-            </div>
-
-            {/* form actions live here, next to the event's own metadata —
-                not floating above the table where they compete with search/export */}
-            <div className="flex flex-wrap gap-3">
-              {hasForm && (
-                <Badge color={isRegistrationOpen ? "success" : "gray"} size="sm">
-                  {isRegistrationOpen ? "Open for Registration" : "Registration Closed"}
-                </Badge>
-              )}
-              {hasForm && (
-                <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={handleCopyRegistrationLink}>
-                  <Copy1 className="size-4" />
-                  Copy Registration Link
-                </Button>
-              )}
-              <Button asChild size="sm" className="gap-2 px-3.5">
-                {hasForm ? <PenToSquare className="size-4" /> : <Plus className="size-4" />}
-                <Link href={`/form-builder?eventId=${event.eventId}`}>
-                  {hasForm ? "Edit Registration Form" : "Create a Form"}
-                </Link>
-              </Button>
-              {canArchive && (
-                <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={() => setShowArchiveConfirm(true)}>
-                  <BoxArchive1 className="size-4" />
-                  Archive Event
-                </Button>
-              )}
-              {canCancel && (
-                <Button appearance="outline" size="sm" className="gap-2 px-3.5" onClick={() => setShowCancelConfirm(true)}>
-                  <Close className="size-4" />
-                  Cancel Event
-                </Button>
               )}
             </div>
           </div>
