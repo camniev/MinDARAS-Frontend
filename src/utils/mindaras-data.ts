@@ -96,6 +96,17 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     sectionId: ""
   },
   {
+    key: "field-gender-choice",
+    typeId: "select",
+    fieldName: "gender_choice_select",
+    label: "Gender",
+    inputType: "select",
+    required: true,
+    options: ["Male", "Female", "Prefer not to say"],
+    locked: true,
+    sectionId: ""
+  },
+  {
     key: "field-sc-choice",
     typeId: "select",
     fieldName: "sc_choice_select",
@@ -134,6 +145,7 @@ export const PERSONAL_INFO_FIELD_NAMES = new Set([
   "full_name",
   "position_designation",
   "office",
+  "gender_choice_select",
   "sc_choice_select",
   "pwd_choice_select",
   "contact_number",
