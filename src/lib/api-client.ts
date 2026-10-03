@@ -109,6 +109,31 @@ export function apiGet<TResponse>(path: string, options?: RequestOptions) {
   return request<TResponse>(path, { method: "GET", ...options });
 }
 
+export async function apiGetBlob(
+  path: string,
+  options?: RequestOptions
+): Promise<Blob> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: "GET",
+    ...options,
+  });
+
+  if (!response.ok) {
+    let message = "An error occurred while processing the request.";
+
+    try {
+      const errorData = await response.json();
+      message = errorData.message ?? message;
+    } catch {
+      // Response wasn't JSON
+    }
+
+    throw new ApiError(message, response.status);
+  }
+
+  return response.blob();
+}
+
 export async function apiUploadFile(path: string, file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append("file", file);

@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/tailgrids/core/table";
 import { ApiError } from "@/lib/api-client";
-import { fetchEventById, fetchFormForEvent, fetchRegistrationsForEvent, updateEventStatus } from "@/lib/events";
+import { fetchEventById, fetchFormForEvent, fetchGeneratedAttendanceFormForEvent, fetchRegistrationsForEvent, updateEventStatus } from "@/lib/events";
 import { cn } from "@/utils/cn";
 import {
   EventDetail,
@@ -41,6 +41,7 @@ import {
   RefreshCircle1Clockwise,
   BoxArchive1,
   Close,
+  Printer,
 } from "@tailgrids/icons";
 import { refresh } from "next/cache";
 import Link from "next/link";
@@ -61,6 +62,7 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
   const [registrations, setRegistrations] = useState<RegistrationListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isArchiving, setIsArchiving] = useState(false);
@@ -225,8 +227,41 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
     }
   }
 
+  async function printAttendanceForm() {
+    setIsPrinting(true);
+
+    try {
+      const blob = await fetchGeneratedAttendanceFormForEvent(eventId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+
+      toast.success("Attendance Form Generated");
+      setIsPrinting(false);
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't print attendance form for this event.";
+
+      toast.error("Couldn't print attendance form for this event.", {
+        description: message,
+      });
+      setIsPrinting(false);
+    } finally {
+      setIsPrinting(false);
+    }
+  }
+
   function handleRefresh() {
     refreshRegistrations();
+  }
+
+  function handlePrintAttendance() {
+    printAttendanceForm();
   }
 
   async function handleCopyRegistrationLink() {
@@ -279,18 +314,7 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
         />
       </div>
 
-      <div className="flex flex-col-reverse items-start justify-between gap-3 px-2 sm:flex-row sm:items-center lg:px-6">
-        <div>
-          <div className="mb-1 flex items-center gap-2">
-            <h1 className="text-[28px] leading-8 font-medium text-text-primary">{event.eventName}</h1>
-            {event.eventCategoryName && (
-              <Badge color="blue" size="sm">
-                {event.eventCategoryName}
-              </Badge>
-            )}
-          </div>
-          <p className="font-mono text-xs text-text-tertiary">{event.eventRefNo}</p>
-        </div>
+      <div className="flex flex-col-reverse items-start justify-end gap-3 px-2 sm:flex-row sm:items-center lg:px-6">
         <div className="flex flex-wrap gap-3">
           {hasForm && (
             <Badge color={isRegistrationOpen ? "success" : "gray"} size="sm">
@@ -326,6 +350,17 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
 
       <div className="space-y-5 px-2 lg:px-6">
         <Card className="space-y-3 p-5">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <h1 className="text-[28px] leading-8 font-medium text-text-primary">{event.eventName}</h1>
+              {event.eventCategoryName && (
+                <Badge color="blue" size="sm">
+                  {event.eventCategoryName}
+                </Badge>
+              )}
+            </div>
+            <p className="font-mono text-xs text-blue-600">{event.eventRefNo}</p>
+          </div>
           {event.description && <p className="text-sm text-text-secondary">{event.description}</p>}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-text-tertiary">
@@ -405,6 +440,15 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
             <Button
               appearance="outline"
               className="ml-1 gap-2 px-4 whitespace-nowrap"
+              onClick={handlePrintAttendance}
+              isDisabled={filtered.length === 0}
+            >
+              <Printer className="size-4" />
+              Print Attendance Form
+            </Button>
+            <Button
+              appearance="outline"
+              className="ml-1 gap-2 px-4 whitespace-nowrap"
               onClick={handleRefresh}
               isDisabled={isRefreshing}
             >
@@ -419,7 +463,7 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
           </div>
         </div>
 
-        <Card className="overflow-hidden p-0">
+        <Card className="overflow-hidden p-0 mb-10">
           <CardContent className="overflow-x-auto p-0">
             <TableRoot className="w-full min-w-max rounded-none border-none">
               <TableHeader>

@@ -1,5 +1,5 @@
 // src/lib/events.ts
-import { apiGet, apiPut, apiUploadFile } from "@/lib/api-client";
+import { apiGet, apiGetBlob, apiPut, apiUploadFile } from "@/lib/api-client";
 import { ApiEvent, EventDetail, RegistrationListItem, FormDefinitionDetail, EventStatusValue } from "@/utils/mindaras-api-types";
 import { ApiError } from "@/lib/api-client";
 
@@ -24,6 +24,10 @@ export function fetchEventById(eventId: string) {
 
 export function fetchRegistrationsForEvent(eventId: string) {
   return apiGet<RegistrationListItem[]>(`/api/Registration/${eventId}/Registrations`);
+}
+
+export function fetchGeneratedAttendanceFormForEvent(eventId: string) {
+  return apiGetBlob(`/api/Registration/${eventId}/AttendanceForm/Print`);
 }
 
 export async function fetchFormForEvent(eventId: string): Promise<FormDefinitionDetail | null> {
