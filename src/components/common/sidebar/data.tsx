@@ -72,6 +72,12 @@ export const NAV_DATA = [
     label: "EVENT MANAGEMENT",
     items: [
       {
+        title: "Dashboard",
+        icon: <HomeIcon />,
+        url: "/",
+        items: [],
+      },
+      {
         title: "Events",
         url: "/events",
         icon: <CalendarIcon />,

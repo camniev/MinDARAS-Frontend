@@ -235,3 +235,30 @@ export type DecodedAccessToken = {
 
 // event status shape
 export type EventStatusValue = "Upcoming" | "Ongoing" | "Completed" | "Cancelled";
+
+// dashboard shape
+export type DivisionStat = {
+  divisionOfficeId: string;
+  divisionOfficeName: string;
+  divisionOfficeAbbrev: string;
+  eventCount: number;
+  upcomingCount: number;
+  ongoingCount: number;
+  completedCount: number;
+  cancelledCount: number;
+  registrationCount: number;
+  checkedInCount: number;
+};
+
+export type DivisionEventStat = {
+  eventId: string;
+  eventName: string;
+  status: string;
+  registrationCount: number;
+  checkedInCount: number;
+};
+
+export type DashboardSummary = {
+  division: DivisionStat | null;
+  events: DivisionEventStat[];
+};
