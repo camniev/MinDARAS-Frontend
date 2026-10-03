@@ -160,11 +160,12 @@ export default function DashboardPageClient() {
         </div>
 
       <Card className="overflow-hidden p-0">
-        <CardContent className="overflow-x-auto p-0">
-          <TableRoot className="w-full min-w-max rounded-none border-none">
+        <CardContent className="overflow-hidden p-0">
+          <TableRoot className="w-full table-fixed rounded-none border-none">
             <TableHeader>
               <TableRow className="bg-background-gray-secondary_alt">
-                <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Event Name</TableHead>
+                <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary" style={{ width: '40%'}}>Event Name</TableHead>
+                <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary" style={{ width: '20%'}}>Schedule</TableHead>
                 <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Status</TableHead>
                 <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Registrations</TableHead>
                 <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Checked-In</TableHead>
@@ -186,6 +187,7 @@ export default function DashboardPageClient() {
                   return (
                     <TableRow key={e.eventId} className="[&_td]:border-none">
                       <TableCell className="h-14 px-6 py-3 text-sm font-medium text-text-primary">{e.eventName}</TableCell>
+                      <TableCell className="h-14 px-6 py-3 text-sm font-medium text-text-primary">{e.eventDateRange}</TableCell>
                       <TableCell className="h-14 px-6 py-3">
                         <Badge color={STATUS_COLOR[e.status] ?? "gray"} size="sm">{e.status}</Badge>
                       </TableCell>

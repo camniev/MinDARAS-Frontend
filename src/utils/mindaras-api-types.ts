@@ -253,6 +253,7 @@ export type DivisionStat = {
 export type DivisionEventStat = {
   eventId: string;
   eventName: string;
+  eventDateRange: string;
   status: string;
   registrationCount: number;
   checkedInCount: number;
