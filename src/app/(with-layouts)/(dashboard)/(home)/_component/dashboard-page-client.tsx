@@ -17,8 +17,8 @@ import { fetchDivisionStatistics } from "@/lib/dashboard";
 import { cn } from "@/utils/cn";
 import { DashboardSummary } from "@/utils/mindaras-api-types";
 import { Calendar, CheckCircle1, UserMultiple1 } from "@tailgrids/icons";
-import { useEffect, useState } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import UpcomingEvents from "./upcoming-events";
 
@@ -44,6 +44,25 @@ export default function DashboardPageClient() {
       })
       .finally(() => setIsLoading(false));
   }, []);
+
+  
+
+  const topEvents = useMemo(() => {
+    const events = data?.events ?? [];
+    return events
+      .filter((e) => e.status === "Upcoming" || e.status === "Ongoing")
+      .sort((a, b) => b.registrationCount - a.registrationCount)
+      .slice(0, 10)
+      .map((e) => ({
+        name: e.eventName,
+        Registrations: e.registrationCount,
+        "Checked-In": e.checkedInCount,
+      }));
+  }, [data]);
+
+  function truncateLabel(value: string) {
+    return value.length > 14 ? `${value.slice(0, 14)}…` : value;
+  }
 
   if (isLoading) {
     return (
@@ -80,15 +99,6 @@ export default function DashboardPageClient() {
     { id: "checked-in", title: "Total Checked-In", value: division.checkedInCount, icon: <CheckCircle1 />, bg: "bg-badge-success-background", fg: "text-badge-success-icon-color" },
   ];
 
-  const statusChartData = [
-    { name: "Upcoming", count: division.upcomingCount },
-    { name: "Ongoing", count: division.ongoingCount },
-    { name: "Completed", count: division.completedCount },
-    { name: "Cancelled", count: division.cancelledCount },
-  ];
-
-  console.log(JSON.stringify(statusChartData));
-
   return (
     <div className="mt-6 space-y-5 px-2 lg:px-6">
       <div>
@@ -116,17 +126,34 @@ export default function DashboardPageClient() {
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-5">
-                <Card className="p-5 w-full">
-                    <h2 className="mb-4 text-lg leading-7 font-semibold text-text-primary">Events by Status</h2>
-                    <ChartContainer config={{}} className="w-full" width="100%" height={288}>
-                    <BarChart data={statusChartData}>
+                <Card className="p-5">
+                  <h2 className="mb-4 text-lg leading-7 font-semibold text-text-primary">
+                    Top 10 Events — Registrations vs. Check-Ins
+                  </h2>
+                  {topEvents.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-text-tertiary">
+                      No upcoming or ongoing events in your division.
+                    </p>
+                  ) : (
+                    <ChartContainer config={{}} className="w-full" width="100%" height={360}>
+                      <BarChart data={topEvents} margin={{ bottom: 60 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" fontSize={12} />
+                        <XAxis
+                          dataKey="name"
+                          fontSize={11}
+                          interval={0}
+                          angle={-35}
+                          textAnchor="end"
+                          tickFormatter={truncateLabel}
+                        />
                         <YAxis allowDecimals={false} fontSize={12} />
                         <Tooltip />
-                        <Bar dataKey="count" fill="#5750F1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
+                        <Legend verticalAlign="top" height={32} />
+                        <Bar dataKey="Registrations" fill="#5750F1" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Checked-In" fill="#8DD3BB" radius={[4, 4, 0, 0]} />
+                      </BarChart>
                     </ChartContainer>
+                  )}
                 </Card>
             </div>
             <UpcomingEvents />
@@ -137,30 +164,39 @@ export default function DashboardPageClient() {
           <TableRoot className="w-full min-w-max rounded-none border-none">
             <TableHeader>
               <TableRow className="bg-background-gray-secondary_alt">
-                <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Event</TableHead>
+                <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Event Name</TableHead>
                 <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Status</TableHead>
                 <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Registrations</TableHead>
                 <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Checked-In</TableHead>
+                <TableHead className="px-6 py-2.5 text-xs font-semibold text-text-secondary">Attendance Rate (%)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {events.length === 0 ? (
                 <TableRow>
-                  <TableCell className="p-6 text-center text-sm text-text-tertiary" colSpan={4}>
+                  <TableCell className="p-6 text-center text-sm text-text-tertiary" colSpan={5}>
                     No events yet.
                   </TableCell>
                 </TableRow>
               ) : (
-                events.map((e) => (
-                  <TableRow key={e.eventId} className="[&_td]:border-none">
-                    <TableCell className="h-14 px-6 py-3 text-sm font-medium text-text-primary">{e.eventName}</TableCell>
-                    <TableCell className="h-14 px-6 py-3">
-                      <Badge color={STATUS_COLOR[e.status] ?? "gray"} size="sm">{e.status}</Badge>
-                    </TableCell>
-                    <TableCell className="h-14 px-6 py-3 text-sm text-text-secondary">{e.registrationCount}</TableCell>
-                    <TableCell className="h-14 px-6 py-3 text-sm text-text-secondary">{e.checkedInCount}</TableCell>
-                  </TableRow>
-                ))
+                events.map((e) => {
+                  const attendanceRate =
+                    e.registrationCount > 0 ? (e.checkedInCount / e.registrationCount) * 100 : null;
+
+                  return (
+                    <TableRow key={e.eventId} className="[&_td]:border-none">
+                      <TableCell className="h-14 px-6 py-3 text-sm font-medium text-text-primary">{e.eventName}</TableCell>
+                      <TableCell className="h-14 px-6 py-3">
+                        <Badge color={STATUS_COLOR[e.status] ?? "gray"} size="sm">{e.status}</Badge>
+                      </TableCell>
+                      <TableCell className="h-14 px-6 py-3 text-sm text-text-secondary">{e.registrationCount}</TableCell>
+                      <TableCell className="h-14 px-6 py-3 text-sm text-text-secondary">{e.checkedInCount}</TableCell>
+                      <TableCell className="h-14 px-6 py-3 text-sm text-text-secondary">
+                        {attendanceRate === null ? "—" : `${attendanceRate.toFixed(1)}%`}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </TableRoot>
