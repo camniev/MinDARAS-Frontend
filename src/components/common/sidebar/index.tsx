@@ -59,7 +59,7 @@ export default function Sidebar({
                             )}
                         </>
                     ) : (
-                        <Logo />
+                        <span className="text-xl font-bold">MRAS</span>
                     )}
                 </Link>
 
