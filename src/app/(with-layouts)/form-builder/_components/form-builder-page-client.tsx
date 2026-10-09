@@ -22,11 +22,13 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import SectionCard from "./section-card";
 import ThemeEditor from "./theme-editor";
+import { useAuth } from "@/context/auth-context";
 
 const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 let fieldCounter = 0;
 
 export default function FormBuilderPageClient() {
+  const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
@@ -260,6 +262,7 @@ export default function FormBuilderPageClient() {
   }
 
   async function handleSave() {
+    if (!user) return toast.error("Your session has expired. Please sign in again.");
     if (!eventId) return toast.error("No event selected.");
     if (!formName.trim()) return toast.error("Please give the form a name.");
     if (fields.some((f) => !f.label.trim())) return toast.error("Every field needs a label before saving.");
@@ -279,7 +282,7 @@ export default function FormBuilderPageClient() {
     try {
       await saveEventForm({
         eventId,
-        userId: CURRENT_USER_ID,
+        userId: user?.nameid,
         formName: formName.trim(),
         formDescription: formDescription.trim() || undefined,
         formFields,

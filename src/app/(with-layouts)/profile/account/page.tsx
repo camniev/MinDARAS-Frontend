@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/tailgrids/core/select";
 import { TextField } from "@/components/tailgrids/core/text-field";
+import { useAuth } from "@/context/auth-context";
 import { ApiError } from "@/lib/api-client";
 import { fetchActiveDivisions, fetchActiveUserTypes, fetchUserProfile, updateUserProfile } from "@/lib/users";
 import { DivisionOffice, UserProfile, UserType } from "@/utils/mindaras-api-types";
@@ -23,7 +24,7 @@ import { FieldError, Form } from "react-aria-components";
 import { toast } from "sonner";
 
 // TODO: replace with the real authenticated user's id once auth is wired up
-const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
+// const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 // TODO: derive from real auth/role once a role system exists — the task
 // requires the User Type field to be visible only to Administrators, but
@@ -31,6 +32,8 @@ const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 const CURRENT_USER_IS_ADMIN = true;
 
 export default function AccountPage() {
+  const { user } = useAuth();
+  const userId = user?.nameid;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [divisions, setDivisions] = useState<DivisionOffice[]>([]);
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
@@ -46,7 +49,8 @@ export default function AccountPage() {
   const [userTypeId, setUserTypeId] = useState("");
 
   useEffect(() => {
-    Promise.all([fetchUserProfile(CURRENT_USER_ID), fetchActiveDivisions(), fetchActiveUserTypes()])
+    if (!userId) return;
+    Promise.all([fetchUserProfile(userId), fetchActiveDivisions(), fetchActiveUserTypes()])
       .then(([userProfile, divisionList, userTypeList]) => {
         setProfile(userProfile);
         setDivisions(divisionList);
@@ -66,6 +70,7 @@ export default function AccountPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!user) return;
     if (!profile) return;
 
     setIsSaving(true);

@@ -6,23 +6,26 @@ import { Card } from "@/components/tailgrids/core/card";
 import { scanTicket } from "@/lib/attendance";
 import { ApiError } from "@/lib/api-client";
 import { ScanResult } from "@/utils/mindaras-api-types";
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { toast } from "sonner";
 import ScanResultCard from "./scan-result-card";
 import Scanner, { ScannerHandle } from "./scanner";
+import { useAuth } from "@/context/auth-context";
 
 // TODO: replace with real authenticated user id once auth is wired up
-const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
+// const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 export default function QrAttendancePageClient() {
+  const { user } = useAuth();
   const scannerRef = useRef<ScannerHandle>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   async function handleScan(decodedText: string) {
+    if (!user) return toast.error("Your session has expired. Please sign in again.");
     setIsProcessing(true);
     try {
-      const scanResult = await scanTicket(decodedText.trim(), CURRENT_USER_ID);
+      const scanResult = await scanTicket(decodedText.trim(), user?.nameid);
       setResult(scanResult);
 
       const day =

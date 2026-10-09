@@ -34,16 +34,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Form } from "react-aria-components";
 import { toast } from "sonner";
-import { deriveStatus } from "@/utils/map-api-event";
+import { useAuth } from "@/context/auth-context";
 
 // TODO: replace with real authenticated user id once auth is wired up
-const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
+// const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 type Props = {
   onCreate: (event: EventItem) => void;
 };
 
 export default function CreateEventDialog({ onCreate }: Props) {
+  const { user } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<EventCategory[]>([]);
@@ -63,6 +64,10 @@ export default function CreateEventDialog({ onCreate }: Props) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!user) {
+      toast.error("Your session has expired. Please sign in again.");
+      return;
+    }
     const data = new FormData(e.currentTarget);
 
     const title = String(data.get("title") ?? "").trim();
@@ -97,7 +102,7 @@ export default function CreateEventDialog({ onCreate }: Props) {
       eventLocation: location,
       description,
       eventCapacity: capacityRaw,
-      userId: CURRENT_USER_ID,
+      userId: user?.nameid,
     };
 
     setIsSubmitting(true);

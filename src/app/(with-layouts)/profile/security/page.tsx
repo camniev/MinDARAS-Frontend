@@ -26,11 +26,13 @@ import { useState } from "react";
 import { FieldError, Form } from "react-aria-components";
 import { toast } from "sonner";
 import { securityItems } from "./data";
+import { useAuth } from "@/context/auth-context";
 
 // TODO: replace once auth is wired up
-const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
+//const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 
 export default function SecurityTabContent() {
+  const { user } = useAuth();
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -39,6 +41,7 @@ export default function SecurityTabContent() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!user) return toast.error("Your session has expired. Please sign in again.");
     const data = new FormData(e.currentTarget);
 
     const currentPassword = String(data.get("current-password") ?? "");
@@ -52,7 +55,7 @@ export default function SecurityTabContent() {
 
     setIsSubmitting(true);
     try {
-      await changePassword(CURRENT_USER_ID, { currentPassword, newPassword });
+      await changePassword(user?.nameid, { currentPassword, newPassword });
       toast.success("Password updated");
       setOpenPasswordDialog(false);
       e.currentTarget.reset();
