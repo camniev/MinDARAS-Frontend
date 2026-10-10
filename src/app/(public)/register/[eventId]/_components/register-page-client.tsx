@@ -9,6 +9,7 @@ import { DEFAULT_FORM_THEME } from "@/utils/mindaras-data";
 import { useEffect, useMemo, useState } from "react";
 import DynamicFieldInput from "./dynamic-field-input";
 import RegistrationSuccess from "./registration-success";
+import { useCountries } from "@/hooks/use-countries";
 
 function Shell({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
   return (
@@ -34,6 +35,12 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
   );
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
   const [visitedPath, setVisitedPath] = useState<string[]>([]);
+
+  const {
+    countries,
+    loading: countriesLoading,
+    error: countriesError,
+  } = useCountries();
 
   useEffect(() => {
     if (sortedSections.length > 0 && !currentSectionId) {
@@ -178,6 +185,9 @@ export default function RegisterPageClient({ eventId }: { eventId: string }) {
               onChange={(val) => setValues((prev) => ({ ...prev, [field.fieldId]: val }))}
               error={fieldErrors[field.fieldId]?.[0]}
               accentColor={accentColor}
+              countries={countries}
+              countriesLoading={countriesLoading}
+              countriesError={countriesError}
             />
           </div>
         ))}

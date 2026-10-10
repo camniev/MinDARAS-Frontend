@@ -87,10 +87,10 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
   },
   {
     key: "field-country",
-    typeId: "text",
+    typeId: "select",
     fieldName: "country",
     label: "Country",
-    inputType: "text",
+    inputType: "select",
     required: true,
     options: [],
     locked: true,

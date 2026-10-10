@@ -1,5 +1,6 @@
 "use client";
 
+import { useCountries } from "@/hooks/use-countries";
 import { FormFieldDetail } from "@/utils/mindaras-api-types";
 
 type Props = {
@@ -8,9 +9,12 @@ type Props = {
   onChange: (value: string) => void;
   error?: string;
   accentColor: string;
+  countries: string[];
+  countriesLoading: boolean;
+  countriesError: string | null;
 };
 
-export default function DynamicFieldInput({ field, value, onChange, error, accentColor }: Props) {
+export default function DynamicFieldInput({ field, value, onChange, error, accentColor, countries, countriesLoading, countriesError }: Props) {
   const options: string[] = field.options ? JSON.parse(field.options) : [];
   const accentStyle = { "--accent-color": accentColor } as React.CSSProperties;
 
@@ -22,6 +26,61 @@ export default function DynamicFieldInput({ field, value, onChange, error, accen
       </span>
     </div>
   );
+
+  if (field.fieldName === "country") {
+    const countryOptions = countries.length > 0
+      ? countries
+      : field.options;
+
+    return (
+      <div className="w-full">
+        <label
+          htmlFor={field.fieldId}
+          className="mb-2 block text-sm font-medium"
+        >
+          {field.fieldLabel ?? field.fieldLabel}
+          {field.isRequired && (
+            <span className="text-red-500"> *</span>
+          )}
+        </label>
+
+        <select
+          id={field.fieldId}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={field.isRequired}
+          disabled={countriesLoading}
+          className="w-full border-0 border-b border-gray-300 bg-transparent py-1.5 text-sm text-[#1C2434] focus:border-b-2 focus:border-[var(--accent-color)] focus:outline-none"
+        >
+          <option value="">
+            {countriesLoading
+              ? "Loading countries..."
+              : countriesError
+                ? "Unable to load countries"
+                : "Select a country"}
+          </option>
+
+          {countryOptions.map((country) => (
+            <option key={country} value={country}>
+              {country}
+            </option>
+          ))}
+        </select>
+
+        {countriesError && (
+          <p className="mt-1 text-sm text-red-500">
+            {countriesError}
+          </p>
+        )}
+
+        {error && (
+          <p className="mt-1 text-sm text-red-500">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (field.fieldType === "select") {
     return (
@@ -105,6 +164,57 @@ export default function DynamicFieldInput({ field, value, onChange, error, accen
       </div>
     );
   }
+
+  // if (field.fieldName === "country") {
+  //   return (
+  //     <div className="w-full">
+  //       <label
+  //         htmlFor={field.fieldId}
+  //         className="mb-2 block text-sm font-medium"
+  //       >
+  //         {field.fieldLabel}
+  //         {field.isRequired && (
+  //           <span className="text-red-500"> *</span>
+  //         )}
+  //       </label>
+
+  //       <select
+  //         id={field.fieldId}
+  //         name={field.fieldName}
+  //         value={value}
+  //         onChange={(e) => onChange(e.target.value)}
+  //         required={field.isRequired}
+  //         disabled={countriesLoading}
+  //         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5"
+  //         style={{ accentColor }}
+  //       >
+  //         <option value="">
+  //           {countriesLoading
+  //             ? "Loading countries..."
+  //             : "Select a country"}
+  //         </option>
+
+  //         {countries.map((country) => (
+  //           <option key={country} value={country}>
+  //             {country}
+  //           </option>
+  //         ))}
+  //       </select>
+
+  //       {countriesError && (
+  //         <p className="mt-1 text-sm text-red-500">
+  //           {countriesError}
+  //         </p>
+  //       )}
+
+  //       {error && (
+  //         <p className="mt-1 text-sm text-red-500">
+  //           {error}
+  //         </p>
+  //       )}
+  //     </div>
+  //   );
+  // }
 
   // text / email / number / date
   return (
