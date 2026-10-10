@@ -120,6 +120,7 @@ export default function CreateEventDialog({ onCreate }: Props) {
       const categoryName = categories.find((c) => c.eventCategoryId === eventCategoryId)?.eventCategoryName ?? "Uncategorized";
       onCreate({
         id: result.eventId,
+        refNo: result.eventRefNo,
         category: categoryName,
         title,
         description,

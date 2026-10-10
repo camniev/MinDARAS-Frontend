@@ -15,6 +15,7 @@ export function mapApiEventToEventItem(apiEvent: ApiEvent): EventItem {
 
   return {
     id: apiEvent.eventId,
+    refNo: apiEvent.eventRefNo,
     category: apiEvent.eventCategoryName ?? "Uncategorized",
     title: apiEvent.eventName,
     description: apiEvent.description ?? "No description provided.",

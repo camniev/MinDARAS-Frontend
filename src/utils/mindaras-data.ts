@@ -6,6 +6,7 @@ export type EventStatus = "Upcoming" | "Ongoing" | "Completed" | "Cancelled"; //
 
 export type EventItem = {
   id: string;
+  refNo: string;
   category: string;
   title: string;
   description: string;
@@ -68,6 +69,28 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
     fieldName: "email",
     label: "Email Address",
     inputType: "email",
+    required: true,
+    options: [],
+    locked: true,
+    sectionId: ""
+  },
+  {
+    key: "field-dp-consent-choice",
+    typeId: "select",
+    fieldName: "dp_consent_choice_select",
+    label: "Do you consent to the collection and processing of your personal data?",
+    inputType: "select",
+    required: true,
+    options: ["Yes, I consent", "No, I do not consent"],
+    locked: true,
+    sectionId: ""
+  },
+  {
+    key: "field-country",
+    typeId: "text",
+    fieldName: "country",
+    label: "Country",
+    inputType: "text",
     required: true,
     options: [],
     locked: true,
@@ -143,6 +166,7 @@ export const DEFAULT_BUILDER_FIELDS: BuilderField[] = [
 
 export const PERSONAL_INFO_FIELD_NAMES = new Set([
   "full_name",
+  "country",
   "position_designation",
   "office",
   "gender_choice_select",
@@ -166,7 +190,7 @@ export function createDefaultSections(): BuilderSection[] {
   return [
     { sectionId: firstSectionId, title: "Data Privacy Consent", description: "", orderIndex: 0, defaultNextSectionId: personalInfoId },
     { sectionId: personalInfoId, title: "Personal Information", description: "", orderIndex: 1, defaultNextSectionId: submitId },
-    { sectionId: submitId, title: "Submit", description: "", orderIndex: 2, defaultNextSectionId: null },
+    { sectionId: submitId, title: "Submit Your Responses!", description: "", orderIndex: 2, defaultNextSectionId: null },
   ];
 }
 

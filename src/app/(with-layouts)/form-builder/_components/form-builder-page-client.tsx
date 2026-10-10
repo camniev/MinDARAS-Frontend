@@ -24,7 +24,6 @@ import SectionCard from "./section-card";
 import ThemeEditor from "./theme-editor";
 import { useAuth } from "@/context/auth-context";
 
-const CURRENT_USER_ID = "C035AF19-1469-4EC9-84C3-5E095B8602B0";
 let fieldCounter = 0;
 
 export default function FormBuilderPageClient() {
