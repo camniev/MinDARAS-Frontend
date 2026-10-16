@@ -47,6 +47,7 @@ import { refresh } from "next/cache";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import EventStatistics from "./event-statistics";
 
 // fieldNames these are hardcoded to under DEFAULT_BUILDER_FIELDS — always pinned first
 const NAME_FIELD_NAME = "full_name";
@@ -537,6 +538,7 @@ export default function EventDetailPageClient({ eventId }: { eventId: string }) 
             </TableRoot>
           </CardContent>
         </Card>
+        <EventStatistics registrations={registrations} fields={form?.formFields} />
       </div>
       <OverlayWrapper isOpen={showArchiveConfirm} onOpenChange={setShowArchiveConfirm}>
         <Backdrop isDismissable={!isArchiving}>
