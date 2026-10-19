@@ -7,6 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/tailgrids/core/accordion";
 import { ChartContainer } from "@/components/tailgrids/core/chart";
+import { cn } from "@/utils/cn";
 import { FormFieldDetail, RegistrationListItem } from "@/utils/mindaras-api-types";
 import { useMemo } from "react";
 import {
@@ -34,14 +35,15 @@ import {
 // fieldName values of the locked default fields (see DEFAULT_BUILDER_FIELDS). Office also lists the
 // name used by forms created before the defaults were changed, so existing events still get a chart.
 const SECTIONS = [
-  { key: "gender", title: "Gender", fieldNames: ["gender_choice_select"] },
-  { key: "country", title: "Country", fieldNames: ["country"] },
+  { key: "gender", title: "Gender", wide: false, fieldNames: ["gender_choice_select"] },
+  { key: "country", title: "Country", wide: true, fieldNames: ["country"] },
   {
     key: "office",
     title: "Agency / Organization / Office",
+    wide: false,
     fieldNames: ["office", "office_agency_affiliation"],
   },
-  { key: "position", title: "Position / Designation", fieldNames: ["position_designation"] },
+  { key: "position", title: "Position / Designation", wide: false, fieldNames: ["position_designation"] },
 ] as const;
 
 const MAX_BARS = 10;
@@ -196,6 +198,28 @@ type Props = {
 
 const NO_FIELDS: FormFieldDetail[] = [];
 
+function StatPanel({
+  title,
+  meta,
+  wide,
+  children,
+}: {
+  title: string;
+  meta?: string;
+  wide?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("rounded-xl border border-card-border p-4", wide && "xl:col-span-2")}>
+      <h4 className="mb-3 text-sm font-semibold text-text-primary">
+        {title}
+        {meta && <span className="ml-2 text-xs font-normal text-text-tertiary">{meta}</span>}
+      </h4>
+      {children}
+    </div>
+  );
+}
+
 export default function EventStatistics({ registrations, fields = NO_FIELDS }: Props) {
   const sections = useMemo(
     () =>
@@ -241,91 +265,84 @@ export default function EventStatistics({ registrations, fields = NO_FIELDS }: P
     }
   }
 
+  const summary =
+    attendance.total === 0
+      ? "No registrations yet"
+      : `${attendance.total} registration${attendance.total === 1 ? "" : "s"} · ${attendance.percent}% checked in`;
+
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-lg leading-7 font-semibold text-text-primary">Event Statistics</h2>
-        <p className="text-sm text-text-tertiary">
-          Attendance and a breakdown of registration responses. Expand a section to see its chart.
-        </p>
-      </div>
-
-      <AccordionRoot variant="style_one">
-        <AccordionItem>
-          <AccordionTrigger>
-            <span className="flex flex-wrap items-center gap-x-2">
-              Attendance
-              {attendance.total > 0 && (
-                <span className="text-xs font-normal text-text-tertiary">
-                  {attendance.percent}% checked in
-                </span>
-              )}
-            </span>
-          </AccordionTrigger>
-          <AccordionContent>
-            {attendance.total === 0 ? (
-              <p className="text-sm text-text-tertiary">No registrations yet.</p>
-            ) : (
-              <>
-                <div className="mb-2">
-                  <p className="text-3xl leading-9 font-semibold text-text-primary">
-                    {attendance.percent}%
-                  </p>
-                  <p className="text-sm text-text-tertiary">
-                    {attendance.checkedIn} of {attendance.total} registrations checked in
-                  </p>
-                </div>
-                <DonutChart
-                  data={[
-                    { name: "Checked-In", value: attendance.checkedIn },
-                    { name: "Not Checked-In", value: attendance.notCheckedIn },
-                  ]}
-                  total={attendance.total}
-                  colors={[BRAND, BRAND_LIGHT]}
-                />
-                <p className="mt-3 text-xs text-text-tertiary">
-                  Checked in means scanned at least once. For multi-day events this doesn&apos;t
-                  show attendance per day.
-                </p>
-              </>
-            )}
-          </AccordionContent>
-        </AccordionItem>
-
-        {sections.map(({ key, title, field, aggregation }) => (
-          <AccordionItem key={key}>
-            <AccordionTrigger>
-              <span className="flex flex-wrap items-center gap-x-2">
-                {title}
-                {aggregation && (
-                  <span className="text-xs font-normal text-text-tertiary">
-                    {aggregation.answered} response{aggregation.answered === 1 ? "" : "s"}
-                  </span>
-                )}
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              {!field || !aggregation ? (
-                <p className="text-sm text-text-tertiary">
-                  This form doesn&apos;t include a {title} field, so there&apos;s nothing to chart.
-                </p>
-              ) : aggregation.answered === 0 ? (
-                <p className="text-sm text-text-tertiary">No responses yet.</p>
+    <AccordionRoot variant="style_one">
+      <AccordionItem>
+        <AccordionTrigger>
+          <span className="flex flex-col items-start text-left">
+            Event Statistics
+            <span className="text-xs font-normal text-text-tertiary">{summary}</span>
+          </span>
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <StatPanel title="Attendance">
+              {attendance.total === 0 ? (
+                <p className="text-sm text-text-tertiary">No registrations yet.</p>
               ) : (
                 <>
-                  {renderChart(key, aggregation)}
+                  <div className="mb-2">
+                    <p className="text-3xl leading-9 font-semibold text-text-primary">
+                      {attendance.percent}%
+                    </p>
+                    <p className="text-sm text-text-tertiary">
+                      {attendance.checkedIn} of {attendance.total} registrations checked in
+                    </p>
+                  </div>
+                  <DonutChart
+                    data={[
+                      { name: "Checked-In", value: attendance.checkedIn },
+                      { name: "Not Checked-In", value: attendance.notCheckedIn },
+                    ]}
+                    total={attendance.total}
+                    colors={[BRAND, BRAND_LIGHT]}
+                  />
                   <p className="mt-3 text-xs text-text-tertiary">
-                    Based on {aggregation.answered} of {aggregation.total} registrations
-                    {aggregation.answered < aggregation.total
-                      ? "; the rest didn't answer this question (for example, they declined consent)."
-                      : "."}
+                    Checked in means scanned at least once. For multi-day events this doesn&apos;t
+                    show attendance per day.
                   </p>
                 </>
               )}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </AccordionRoot>
-    </section>
+            </StatPanel>
+
+            {sections.map(({ key, title, wide, field, aggregation }) => (
+              <StatPanel
+                key={key}
+                title={title}
+                wide={wide}
+                meta={
+                  aggregation
+                    ? `${aggregation.answered} response${aggregation.answered === 1 ? "" : "s"}`
+                    : undefined
+                }
+              >
+                {!field || !aggregation ? (
+                  <p className="text-sm text-text-tertiary">
+                    This form doesn&apos;t include a {title} field, so there&apos;s nothing to chart.
+                  </p>
+                ) : aggregation.answered === 0 ? (
+                  <p className="text-sm text-text-tertiary">No responses yet.</p>
+                ) : (
+                  <>
+                    {renderChart(key, aggregation)}
+                    <p className="mt-3 text-xs text-text-tertiary">
+                      Based on {aggregation.answered} of {aggregation.total} registrations
+                      {aggregation.answered < aggregation.total
+                        ? "; the rest didn't answer this question (for example, they declined consent)."
+                        : "."}
+                    </p>
+                  </>
+                )}
+              </StatPanel>
+            ))}
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </AccordionRoot>
   );
 }
