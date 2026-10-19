@@ -40,10 +40,10 @@ const SECTIONS = [
   {
     key: "office",
     title: "Agency / Organization / Office",
-    wide: false,
+    wide: true,
     fieldNames: ["office", "office_agency_affiliation"],
   },
-  { key: "position", title: "Position / Designation", wide: false, fieldNames: ["position_designation"] },
+  { key: "position", title: "Position / Designation", wide: true, fieldNames: ["position_designation"] },
 ] as const;
 
 const MAX_BARS = 10;
